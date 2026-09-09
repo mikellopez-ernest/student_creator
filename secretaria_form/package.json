@@ -1,0 +1,16 @@
+{
+  "name": "secretaria_form",
+  "version": "0.1.0",
+  "private": true,
+  "description": "secretaria_form Google Apps Script project managed with clasp.",
+  "scripts": {
+    "login": "clasp login",
+    "pull": "clasp pull",
+    "push": "clasp push",
+    "open": "clasp open",
+    "status": "clasp status"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.0.6"
+  }
+}

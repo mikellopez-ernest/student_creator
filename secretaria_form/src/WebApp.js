@@ -1,0 +1,239 @@
+const NEW_STUDENT_TABLE_NAME_ = 'Dinantia';
+const NEW_STUDENT_SHEET_NAME_ = 'new_student_form';
+const NEW_STUDENT_CONTACTS_SHEET_NAME_ = 'new_student_form_contacts';
+const NEW_STUDENT_CONFIG_SHEET_NAME_ = 'new_student_config';
+const ALLOWED_EMAIL_DOMAIN_ = 'iernestlluch.cat';
+const DIRECTIVE_TEAM_EMAIL_ = 'equip_directiu@iernestlluch.cat';
+
+function doGet() {
+  assertAllowedUser_();
+
+  const template = HtmlService.createTemplateFromFile('NewStudentForm');
+  template.courses = getNewStudentConfig_().map(function(config) {
+    return config.course;
+  });
+
+  return template
+    .evaluate()
+    .setTitle('Creacio alumne nou')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function submitNewStudentForm(payload) {
+  assertAllowedUser_();
+
+  const config = getNewStudentConfig_();
+  const student = sanitizeStudentPayload_(payload);
+  const contacts = sanitizeContactsPayload_(payload);
+  const selectedCourseConfig = findSelectedCourseConfig_(config, student.level);
+
+  const dinantiaSpreadsheet = openLogicalTableSpreadsheet_(NEW_STUDENT_TABLE_NAME_);
+  const studentSheet = getRequiredSheet_(dinantiaSpreadsheet, NEW_STUDENT_SHEET_NAME_);
+  const contactsSheet = getRequiredSheet_(dinantiaSpreadsheet, NEW_STUDENT_CONTACTS_SHEET_NAME_);
+
+  appendObjectByHeaders_(studentSheet, {
+    id: student.id,
+    name: student.name,
+    surname1: student.surname1,
+    surname2: student.surname2,
+    level: student.level
+  }, ['id', 'name', 'surname1', 'surname2', 'level']);
+
+  contacts.forEach(function(contact) {
+    appendObjectByHeaders_(contactsSheet, {
+      id: student.id,
+      full_name: contact.fullName,
+      email: contact.email,
+      phone: contact.phone,
+      relation: contact.relation
+    }, ['id', 'full_name', 'email', 'phone', 'relation']);
+  });
+
+  sendNewStudentNotification_(student, contacts, selectedCourseConfig);
+
+  return {
+    ok: true,
+    message: 'Alumne desat correctament.',
+    studentId: student.id,
+    contacts: contacts.length
+  };
+}
+
+function assertAllowedUser_() {
+  const email = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
+  if (!email || !email.endsWith('@' + ALLOWED_EMAIL_DOMAIN_)) {
+    throw new Error('Aquest formulari nomes esta disponible per a usuaris @' + ALLOWED_EMAIL_DOMAIN_ + '.');
+  }
+}
+
+function sanitizeStudentPayload_(payload) {
+  const raw = payload || {};
+  const student = {
+    id: cleanText_(raw.id),
+    name: cleanText_(raw.name),
+    surname1: cleanText_(raw.surname1),
+    surname2: cleanText_(raw.surname2),
+    level: cleanText_(raw.level)
+  };
+
+  requireField_(student.id, 'Identificador de l alumne');
+  requireField_(student.name, 'Nom');
+  requireField_(student.surname1, 'Cognom 1');
+  requireField_(student.level, 'Nivell');
+
+  return student;
+}
+
+function sanitizeContactsPayload_(payload) {
+  const rawContacts = payload && Array.isArray(payload.contacts) ? payload.contacts : [];
+
+  return rawContacts.map(function(rawContact, index) {
+    const contact = {
+      fullName: cleanText_(rawContact.fullName),
+      email: cleanText_(rawContact.email).toLowerCase(),
+      phone: cleanText_(rawContact.phone),
+      relation: cleanText_(rawContact.relation)
+    };
+
+    requireField_(contact.fullName, 'Nom complet del familiar ' + (index + 1));
+    requireField_(contact.email, 'Correu electronic del familiar ' + (index + 1));
+    requireField_(contact.phone, 'Telefon del familiar ' + (index + 1));
+    requireField_(contact.relation, 'Relacio del familiar ' + (index + 1));
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email)) {
+      throw new Error('El correu electronic del familiar ' + (index + 1) + ' no es valid.');
+    }
+
+    if (['Mare', 'Pare', 'Un altre'].indexOf(contact.relation) === -1) {
+      throw new Error('La relacio del familiar ' + (index + 1) + ' no es valida.');
+    }
+
+    return contact;
+  });
+}
+
+function cleanText_(value) {
+  return String(value || '').trim();
+}
+
+function requireField_(value, label) {
+  if (!cleanText_(value)) {
+    throw new Error('Camp obligatori pendent: ' + label + '.');
+  }
+}
+
+function getNewStudentConfig_() {
+  const dinantiaSpreadsheet = openLogicalTableSpreadsheet_(NEW_STUDENT_TABLE_NAME_);
+  const sheet = getRequiredSheet_(dinantiaSpreadsheet, NEW_STUDENT_CONFIG_SHEET_NAME_);
+  const headerIndexMap = getHeaderIndexMap_(sheet);
+  const coursesIndex = headerIndexMap[normalizeHeader_('courses')];
+  const emailCoordIndex = headerIndexMap[normalizeHeader_('email_coord')];
+
+  if (coursesIndex === undefined) {
+    throw new Error('Required header not found in sheet "' + NEW_STUDENT_CONFIG_SHEET_NAME_ + '": courses');
+  }
+
+  if (emailCoordIndex === undefined) {
+    throw new Error('Required header not found in sheet "' + NEW_STUDENT_CONFIG_SHEET_NAME_ + '": email_coord');
+  }
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    throw new Error('No hi ha cap curs configurat.');
+  }
+
+  const values = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  const config = values
+    .map(function(row) {
+      return {
+        course: cleanText_(row[coursesIndex]),
+        emailCoord: cleanText_(row[emailCoordIndex]).toLowerCase()
+      };
+    })
+    .filter(function(row) {
+      return row.course;
+    });
+
+  if (!config.length) {
+    throw new Error('No hi ha cap curs configurat.');
+  }
+
+  return config;
+}
+
+function findSelectedCourseConfig_(config, selectedCourse) {
+  const selected = cleanText_(selectedCourse);
+  const match = config.find(function(row) {
+    return row.course === selected;
+  });
+
+  if (!match) {
+    throw new Error('El nivell seleccionat no es valid.');
+  }
+
+  if (!match.emailCoord) {
+    throw new Error('No hi ha cap email_coord configurat per al nivell seleccionat: ' + selected + '.');
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(match.emailCoord)) {
+    throw new Error('L email_coord configurat per al nivell seleccionat no es valid.');
+  }
+
+  return match;
+}
+
+function sendNewStudentNotification_(student, contacts, selectedCourseConfig) {
+  const recipients = uniqueEmails_([
+    selectedCourseConfig.emailCoord,
+    DIRECTIVE_TEAM_EMAIL_
+  ]);
+
+  MailApp.sendEmail({
+    to: recipients.join(','),
+    subject: 'Nou alumne pendent de crear: ' + student.name + ' ' + student.surname1,
+    body: buildNewStudentNotificationBody_(student, contacts, selectedCourseConfig)
+  });
+}
+
+function buildNewStudentNotificationBody_(student, contacts, selectedCourseConfig) {
+  const lines = [
+    'S ha rebut una nova sol licitud de creacio d alumne.',
+    '',
+    'Dades de l alumne:',
+    'Identificador: ' + student.id,
+    'Nom: ' + student.name,
+    'Cognom 1: ' + student.surname1,
+    'Cognom 2: ' + (student.surname2 || '-'),
+    'Nivell: ' + selectedCourseConfig.course,
+    '',
+    'Familiars:'
+  ];
+
+  if (!contacts.length) {
+    lines.push('- Cap familiar informat.');
+  } else {
+    contacts.forEach(function(contact, index) {
+      lines.push(
+        '- Familiar ' + (index + 1) + ': ' + contact.fullName +
+        ' | ' + contact.email +
+        ' | ' + contact.phone +
+        ' | ' + contact.relation
+      );
+    });
+  }
+
+  return lines.join('\n');
+}
+
+function uniqueEmails_(emails) {
+  const seen = {};
+  return emails
+    .map(function(email) {
+      return cleanText_(email).toLowerCase();
+    })
+    .filter(function(email) {
+      if (!email || seen[email]) return false;
+      seen[email] = true;
+      return true;
+    });
+}

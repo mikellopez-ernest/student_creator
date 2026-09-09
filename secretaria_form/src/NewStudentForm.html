@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ca">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f6f7f9;
+        --surface: #ffffff;
+        --text: #1d2630;
+        --muted: #5f6b7a;
+        --border: #d8dee6;
+        --primary: #126a72;
+        --primary-dark: #0b5057;
+        --danger: #b42318;
+        --success: #14743f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 16px;
+        line-height: 1.45;
+      }
+
+      main {
+        width: min(760px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0;
+      }
+
+      h1 {
+        margin: 0 0 24px;
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      form {
+        display: grid;
+        gap: 18px;
+      }
+
+      fieldset {
+        margin: 0;
+        padding: 20px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+
+      legend {
+        padding: 0 6px;
+        font-weight: 700;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .student-grid {
+        grid-template-columns: 1fr;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+        font-weight: 700;
+      }
+
+      .label-text {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 4px;
+      }
+
+      .required {
+        color: var(--danger);
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        color: var(--text);
+        background: #ffffff;
+        font: inherit;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 3px solid rgba(18, 106, 114, 0.18);
+        border-color: var(--primary);
+      }
+
+      .contacts-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 4px 0 0;
+      }
+
+      .contacts-header p {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      button {
+        min-height: 44px;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 16px;
+        background: var(--primary);
+        color: #ffffff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--primary-dark);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      .add-button {
+        width: 44px;
+        padding: 0;
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .contact-block {
+        position: relative;
+      }
+
+      .remove-button {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        min-height: 34px;
+        padding: 0 10px;
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--border);
+      }
+
+      .remove-button:hover {
+        background: #fff2f0;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+
+      .message {
+        min-height: 24px;
+        margin: 0;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .message.error {
+        color: var(--danger);
+      }
+
+      .message.success {
+        color: var(--success);
+      }
+
+      @media (max-width: 640px) {
+        main {
+          width: min(100% - 24px, 760px);
+          padding: 24px 0;
+        }
+
+        h1 {
+          font-size: 26px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          align-items: stretch;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Creació d'alumne nou.</h1>
+
+      <form id="student-form">
+        <fieldset>
+          <legend>Dades de l'alumne</legend>
+          <div class="grid student-grid">
+            <label>
+              <span class="label-text">Identificador de l'alumne <span class="required">*</span></span>
+              <input name="id" type="text" autocomplete="off" required>
+            </label>
+
+            <label>
+              <span class="label-text">Nom <span class="required">*</span></span>
+              <input name="name" type="text" autocomplete="given-name" required>
+            </label>
+
+            <label>
+              <span class="label-text">Cognom 1 <span class="required">*</span></span>
+              <input name="surname1" type="text" autocomplete="family-name" required>
+            </label>
+
+            <label>
+              <span class="label-text">Cognom 2</span>
+              <input name="surname2" type="text" autocomplete="additional-name">
+            </label>
+
+            <label>
+              <span class="label-text">Nivell <span class="required">*</span></span>
+              <select name="level" id="level" required>
+                <option value="">Selecciona una opció</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="contacts-header">
+          <p>Afegir un familiar</p>
+          <button class="add-button" type="button" id="add-contact" aria-label="Afegir familiar">+</button>
+        </div>
+
+        <section id="contacts" aria-live="polite"></section>
+
+        <div class="actions">
+          <p class="message" id="message" role="status"></p>
+          <button type="submit" id="submit-button">Enviar</button>
+        </div>
+      </form>
+    </main>
+
+    <template id="contact-template">
+      <fieldset class="contact-block">
+        <legend>Familiar</legend>
+        <button class="remove-button" type="button">Treure</button>
+        <div class="grid">
+          <label>
+            <span class="label-text">Nom complet <span class="required">*</span></span>
+            <input data-field="fullName" type="text" autocomplete="name" required>
+          </label>
+
+          <label>
+            <span class="label-text">Correu electrònic <span class="required">*</span></span>
+            <input data-field="email" type="email" autocomplete="email" required>
+          </label>
+
+          <label>
+            <span class="label-text">Telèfon <span class="required">*</span></span>
+            <input data-field="phone" type="tel" autocomplete="tel" required>
+          </label>
+
+          <label>
+            <span class="label-text">Relació <span class="required">*</span></span>
+            <select data-field="relation" required>
+              <option value="">Selecciona una opció</option>
+              <option value="Mare">Mare</option>
+              <option value="Pare">Pare</option>
+              <option value="Un altre">Un altre</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+    </template>
+
+    <script>
+      const form = document.getElementById('student-form');
+      const contactsContainer = document.getElementById('contacts');
+      const contactTemplate = document.getElementById('contact-template');
+      const addContactButton = document.getElementById('add-contact');
+      const submitButton = document.getElementById('submit-button');
+      const message = document.getElementById('message');
+      const courses = <?!= JSON.stringify(courses) ?>;
+
+      renderCourseOptions();
+      addContactButton.addEventListener('click', addContactBlock);
+      form.addEventListener('submit', submitForm);
+
+      function renderCourseOptions() {
+        const levelSelect = document.getElementById('level');
+
+        courses.forEach(function(course) {
+          const option = document.createElement('option');
+          option.value = course;
+          option.textContent = course;
+          levelSelect.appendChild(option);
+        });
+      }
+
+      function addContactBlock() {
+        const fragment = contactTemplate.content.cloneNode(true);
+        const block = fragment.querySelector('.contact-block');
+        const removeButton = fragment.querySelector('.remove-button');
+
+        removeButton.addEventListener('click', function() {
+          block.remove();
+        });
+
+        contactsContainer.appendChild(fragment);
+        block.querySelector('input').focus();
+      }
+
+      function submitForm(event) {
+        event.preventDefault();
+
+        if (!form.reportValidity()) return;
+
+        setBusy(true);
+        showMessage('', '');
+
+        google.script.run
+          .withSuccessHandler(function(response) {
+            showMessage(response.message, 'success');
+            form.reset();
+            contactsContainer.innerHTML = '';
+            setBusy(false);
+          })
+          .withFailureHandler(function(error) {
+            showMessage(error && error.message ? error.message : 'No s ha pogut desar el formulari.', 'error');
+            setBusy(false);
+          })
+          .submitNewStudentForm(buildPayload());
+      }
+
+      function buildPayload() {
+        const formData = new FormData(form);
+        const contacts = Array.from(contactsContainer.querySelectorAll('.contact-block')).map(function(block) {
+          return {
+            fullName: getContactValue(block, 'fullName'),
+            email: getContactValue(block, 'email'),
+            phone: getContactValue(block, 'phone'),
+            relation: getContactValue(block, 'relation')
+          };
+        });
+
+        return {
+          id: formData.get('id'),
+          name: formData.get('name'),
+          surname1: formData.get('surname1'),
+          surname2: formData.get('surname2'),
+          level: formData.get('level'),
+          contacts: contacts
+        };
+      }
+
+      function getContactValue(block, fieldName) {
+        return block.querySelector('[data-field="' + fieldName + '"]').value;
+      }
+
+      function setBusy(isBusy) {
+        submitButton.disabled = isBusy;
+        addContactButton.disabled = isBusy;
+        submitButton.textContent = isBusy ? 'Enviant...' : 'Enviar';
+      }
+
+      function showMessage(text, type) {
+        message.textContent = text;
+        message.className = 'message' + (type ? ' ' + type : '');
+      }
+    </script>
+  </body>
+</html>
