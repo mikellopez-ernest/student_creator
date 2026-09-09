@@ -328,6 +328,14 @@
           block.remove();
         });
 
+        const phoneInput = fragment.querySelector('[data-field="phone"]');
+        phoneInput.addEventListener('blur', function() {
+          normalizePhoneInput(phoneInput);
+        });
+        phoneInput.addEventListener('input', function() {
+          phoneInput.setCustomValidity('');
+        });
+
         contactsContainer.appendChild(fragment);
         block.querySelector('input').focus();
       }
@@ -335,6 +343,7 @@
       function submitForm(event) {
         event.preventDefault();
 
+        if (!validatePhones()) return;
         if (!form.reportValidity()) return;
 
         setBusy(true);
@@ -377,6 +386,40 @@
 
       function getContactValue(block, fieldName) {
         return block.querySelector('[data-field="' + fieldName + '"]').value;
+      }
+
+      function validatePhones() {
+        const phoneInputs = Array.from(contactsContainer.querySelectorAll('[data-field="phone"]'));
+        let valid = true;
+
+        phoneInputs.forEach(function(input) {
+          if (!normalizePhoneInput(input)) valid = false;
+        });
+
+        if (!valid) {
+          form.reportValidity();
+        }
+
+        return valid;
+      }
+
+      function normalizePhoneInput(input) {
+        const compact = String(input.value || '').trim().replace(/[\s.-]/g, '');
+
+        if (/^[6789]\d{8}$/.test(compact)) {
+          input.value = '+34' + compact;
+          input.setCustomValidity('');
+          return true;
+        }
+
+        if (/^\+34[6789]\d{8}$/.test(compact)) {
+          input.value = compact;
+          input.setCustomValidity('');
+          return true;
+        }
+
+        input.setCustomValidity('El telèfon ha de tenir 9 números i començar per 6, 7, 8 o 9. Pots escriure, per exemple, 666221996 o +34666221996.');
+        return false;
       }
 
       function setBusy(isBusy) {

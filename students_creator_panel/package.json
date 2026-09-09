@@ -1,0 +1,17 @@
+{
+  "name": "students_creator_panel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Students creator admin panel Google Apps Script project managed with clasp.",
+  "scripts": {
+    "login": "clasp login",
+    "pull": "clasp pull",
+    "push": "clasp push",
+    "open": "clasp open",
+    "status": "clasp status",
+    "deploy": "clasp push --force && clasp version \"students_creator_panel\""
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.0.6"
+  }
+}

@@ -77,14 +77,26 @@ The web app stores submissions in:
 | --- | --- |
 | `Dinantia -> new_student_form` | Student row with `id`, `name`, `surname1`, `surname2`, and `level` |
 | `Dinantia -> new_student_form_contacts` | Relative/contact rows linked by student `id` |
-| `Dinantia -> new_student_config` | Course dropdown options and coordinator email routing |
+| `Dinantia -> new_student_config` | Course dropdown options |
 
 After saving, the web app sends an email notification to:
 
-- The `email_coord` value next to the selected course in `Dinantia -> new_student_config`
 - `equip_directiu@iernestlluch.cat`
+
+Relative phone numbers are normalized before saving:
+
+- `666221996` is saved as `+34666221996`
+- `+34666221996` is accepted unchanged
+- Other formats, including Spanish numbers that do not start with `6`, `7`, `8`, or `9`, are rejected
+
+Phone cells are written as plain text so Google Sheets keeps the leading `+`.
 
 ## Shared References
 
 - `../docs/SHARED_SPREADSHEET_DATABASE.md`
 - `../docs/DINANTIA_API_NOTES.md`
+
+## Local Documentation
+
+- `docs/SPEC.md`
+- `docs/DEPLOYMENT.md`

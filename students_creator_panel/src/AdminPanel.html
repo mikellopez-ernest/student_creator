@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ca">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f5f6f8;
+        --surface: #ffffff;
+        --surface-soft: #eef3f4;
+        --text: #1c2630;
+        --muted: #62717f;
+        --border: #d6dee5;
+        --primary: #116873;
+        --primary-dark: #0b4f58;
+        --danger: #b42318;
+        --success: #14743f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+
+      main {
+        width: min(1440px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 24px 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: 0;
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .status {
+        margin: 0;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .status.success {
+        color: var(--success);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+
+      table {
+        width: 100%;
+        min-width: 1180px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+        text-align: left;
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--surface-soft);
+        font-size: 13px;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      input {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 9px 10px;
+        color: var(--text);
+        background: #ffffff;
+        font: inherit;
+      }
+
+      input:focus {
+        outline: 3px solid rgba(17, 104, 115, 0.18);
+        border-color: var(--primary);
+      }
+
+      button {
+        min-height: 38px;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 12px;
+        background: var(--primary);
+        color: #ffffff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      button:hover {
+        background: var(--primary-dark);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+      }
+
+      .secondary {
+        background: #e3ebee;
+        color: var(--text);
+      }
+
+      .secondary:hover {
+        background: #d5e1e5;
+      }
+
+      .student-name {
+        margin: 0 0 4px;
+        font-weight: 700;
+      }
+
+      .line {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .contacts {
+        display: grid;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .contact {
+        display: grid;
+        gap: 8px;
+        padding-left: 8px;
+        border-left: 3px solid var(--border);
+      }
+
+      .contact-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .mini-label {
+        display: grid;
+        gap: 4px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .stack {
+        display: grid;
+        gap: 8px;
+      }
+
+      .inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .group-picker {
+        position: relative;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        min-height: 30px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 5px 8px;
+        background: #dcebed;
+        color: #123b42;
+        font-weight: 700;
+      }
+
+      .chip button {
+        min-height: 20px;
+        width: 20px;
+        padding: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: #123b42;
+      }
+
+      .suggestions {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        left: 0;
+        z-index: 5;
+        display: none;
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: #ffffff;
+        box-shadow: 0 10px 30px rgba(30, 40, 50, 0.16);
+      }
+
+      .suggestion {
+        width: 100%;
+        min-height: auto;
+        border-radius: 0;
+        padding: 8px 10px;
+        background: #ffffff;
+        color: var(--text);
+        text-align: left;
+        font-weight: 400;
+        white-space: normal;
+      }
+
+      .suggestion:hover {
+        background: var(--surface-soft);
+      }
+
+      .row-status {
+        min-height: 20px;
+        margin: 0;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .row-status.error {
+        color: var(--danger);
+      }
+
+      .row-status.success {
+        color: var(--success);
+      }
+
+      .empty {
+        padding: 28px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          width: min(100% - 20px, 1440px);
+        }
+
+        .toolbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="toolbar">
+        <div>
+          <h1>Gestió de noves incorporacions</h1>
+          <p class="status" id="status">Carregant...</p>
+        </div>
+        <button type="button" id="refresh-button">Actualitza</button>
+      </div>
+
+      <div class="table-wrap" id="table-wrap"></div>
+    </main>
+
+    <script>
+      const state = {
+        rows: [],
+        groups: [],
+        selectedGroupsByRow: {}
+      };
+
+      const statusEl = document.getElementById('status');
+      const tableWrap = document.getElementById('table-wrap');
+      const refreshButton = document.getElementById('refresh-button');
+
+      refreshButton.addEventListener('click', loadPanel);
+      document.addEventListener('click', closeSuggestionsOnOutsideClick);
+      loadPanel();
+
+      function loadPanel() {
+        setGlobalStatus('Carregant...', '');
+        refreshButton.disabled = true;
+
+        google.script.run
+          .withSuccessHandler(function(data) {
+            state.rows = data.rows || [];
+            state.groups = data.groups || [];
+            state.selectedGroupsByRow = {};
+            renderTable();
+            setGlobalStatus(state.rows.length ? state.rows.length + ' alumne(s) pendent(s).' : 'No hi ha alumnes pendents.', 'success');
+            refreshButton.disabled = false;
+          })
+          .withFailureHandler(function(error) {
+            setGlobalStatus(getErrorMessage(error), 'error');
+            tableWrap.innerHTML = '<div class="empty">No s han pogut carregar les dades.</div>';
+            refreshButton.disabled = false;
+          })
+          .getPanelData();
+      }
+
+      function renderTable() {
+        if (!state.rows.length) {
+          tableWrap.innerHTML = '<div class="empty">No hi ha alumnes pendents de gestionar.</div>';
+          return;
+        }
+
+        const table = document.createElement('table');
+        table.innerHTML = [
+          '<thead>',
+          '<tr>',
+          "<th>Dades de l'alumne</th>",
+          '<th>Usuari iernestlluch</th>',
+          '<th>Usuari Dinantia</th>',
+          '<th>Generar</th>',
+          '</tr>',
+          '</thead>',
+          '<tbody></tbody>'
+        ].join('');
+
+        const tbody = table.querySelector('tbody');
+        state.rows.forEach(function(row) {
+          state.selectedGroupsByRow[row.rowNumber] = [];
+          tbody.appendChild(renderRow(row));
+        });
+
+        tableWrap.innerHTML = '';
+        tableWrap.appendChild(table);
+      }
+
+      function renderRow(row) {
+        const tr = document.createElement('tr');
+        tr.dataset.rowNumber = row.rowNumber;
+
+        tr.appendChild(renderStudentCell(row));
+        tr.appendChild(renderEmailCell(row));
+        tr.appendChild(renderDinantiaCell(row));
+        tr.appendChild(renderActionCell(row));
+
+        return tr;
+      }
+
+      function renderStudentCell(row) {
+        const td = document.createElement('td');
+        const contacts = row.contacts && row.contacts.length ? row.contacts : [];
+
+        td.innerHTML = [
+          '<p class="student-name"></p>',
+          '<p class="line"></p>',
+          '<div class="contacts"></div>'
+        ].join('');
+
+        td.querySelector('.student-name').textContent = row.fullName;
+        td.querySelector('.line').textContent = row.level;
+
+        const contactsEl = td.querySelector('.contacts');
+        if (!contacts.length) {
+          const empty = document.createElement('p');
+          empty.className = 'line';
+          empty.textContent = 'Sense familiars.';
+          contactsEl.appendChild(empty);
+        } else {
+          contacts.forEach(function(contact, index) {
+            const contactEl = document.createElement('div');
+            contactEl.className = 'contact';
+            contactEl.dataset.contactRowNumber = contact.rowNumber;
+            contactEl.innerHTML = [
+              '<p class="line"></p>',
+              '<div class="contact-grid">',
+              '<label class="mini-label">Nom complet<input type="text" class="contact-full-name" required></label>',
+              '<label class="mini-label">Telèfon<input type="tel" class="contact-phone" required></label>',
+              '<label class="mini-label">Correu electrònic<input type="email" class="contact-email" required></label>',
+              '</div>'
+            ].join('');
+
+            contactEl.querySelector('.line').textContent = 'Familiar ' + (index + 1) + ' · ' + contact.relation;
+            contactEl.querySelector('.contact-full-name').value = contact.fullName;
+            contactEl.querySelector('.contact-phone').value = contact.phone;
+            contactEl.querySelector('.contact-email').value = contact.email;
+            contactsEl.appendChild(contactEl);
+          });
+        }
+
+        return td;
+      }
+
+      function renderEmailCell(row) {
+        const td = document.createElement('td');
+        td.innerHTML = [
+          '<div class="stack">',
+          '<input type="email" class="email-input">',
+          '<div class="inline">',
+          '<button type="button" class="secondary check-email-button">Comprova</button>',
+          '</div>',
+          '<p class="row-status email-status"></p>',
+          '</div>'
+        ].join('');
+
+        td.querySelector('.email-input').value = row.suggestedEmail;
+        td.querySelector('.check-email-button').addEventListener('click', function() {
+          checkEmail(row.rowNumber);
+        });
+
+        return td;
+      }
+
+      function renderDinantiaCell(row) {
+        const td = document.createElement('td');
+        td.innerHTML = [
+          '<div class="stack">',
+          '<div class="chips"></div>',
+          '<div class="group-picker">',
+          '<input type="text" class="group-input" placeholder="Escriu per cercar grups">',
+          '<div class="suggestions"></div>',
+          '</div>',
+          '<p class="line">ID Dinantia: <strong></strong></p>',
+          '</div>'
+        ].join('');
+
+        td.querySelector('strong').textContent = row.id;
+        const input = td.querySelector('.group-input');
+        input.addEventListener('input', function() {
+          renderGroupSuggestions(row.rowNumber, td);
+        });
+        input.addEventListener('focus', function() {
+          renderGroupSuggestions(row.rowNumber, td);
+        });
+
+        return td;
+      }
+
+      function renderActionCell(row) {
+        const td = document.createElement('td');
+        td.innerHTML = [
+          '<div class="stack">',
+          '<button type="button" class="generate-button">Generar</button>',
+          '<p class="row-status action-status"></p>',
+          '</div>'
+        ].join('');
+
+        td.querySelector('.generate-button').addEventListener('click', function() {
+          generate(row.rowNumber);
+        });
+
+        return td;
+      }
+
+      function checkEmail(rowNumber) {
+        const tr = getRowElement(rowNumber);
+        const button = tr.querySelector('.check-email-button');
+        const status = tr.querySelector('.email-status');
+        const email = tr.querySelector('.email-input').value;
+
+        button.disabled = true;
+        setRowStatus(status, 'Comprovant...', '');
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            setRowStatus(status, result.available ? 'Correu disponible.' : 'Aquest correu ja existeix.', result.available ? 'success' : 'error');
+            button.disabled = false;
+          })
+          .withFailureHandler(function(error) {
+            setRowStatus(status, getErrorMessage(error), 'error');
+            button.disabled = false;
+          })
+          .checkGoogleEmailAvailability(email);
+      }
+
+      function generate(rowNumber) {
+        const tr = getRowElement(rowNumber);
+        const button = tr.querySelector('.generate-button');
+        const status = tr.querySelector('.action-status');
+        const email = tr.querySelector('.email-input').value;
+        const groupIds = state.selectedGroupsByRow[rowNumber] || [];
+        const contacts = getEditableContacts(tr);
+
+        if (!validateRowInputs(tr)) return;
+
+        button.disabled = true;
+        setRowStatus(status, 'Generant...', '');
+
+        const timeoutId = window.setTimeout(function() {
+          setRowStatus(status, 'La generacio encara no ha respost. Revisa Execucions a Apps Script per veure en quin pas s ha quedat.', 'error');
+          button.disabled = false;
+        }, 120000);
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            window.clearTimeout(timeoutId);
+            setRowStatus(status, result.message, 'success');
+            tr.remove();
+            state.rows = state.rows.filter(function(row) {
+              return row.rowNumber !== rowNumber;
+            });
+            setGlobalStatus(state.rows.length ? state.rows.length + ' alumne(s) pendent(s).' : 'No hi ha alumnes pendents.', 'success');
+          })
+          .withFailureHandler(function(error) {
+            window.clearTimeout(timeoutId);
+            setRowStatus(status, getErrorMessage(error), 'error');
+            button.disabled = false;
+          })
+          .createStudentAccounts({
+            rowNumber: rowNumber,
+            institutionalEmail: email,
+            groupIds: groupIds,
+            contacts: contacts
+          });
+      }
+
+      function getEditableContacts(rowElement) {
+        return Array.from(rowElement.querySelectorAll('.contact')).map(function(contactEl) {
+          return {
+            rowNumber: contactEl.dataset.contactRowNumber,
+            fullName: contactEl.querySelector('.contact-full-name').value,
+            phone: contactEl.querySelector('.contact-phone').value,
+            email: contactEl.querySelector('.contact-email').value
+          };
+        });
+      }
+
+      function validateRowInputs(rowElement) {
+        const inputs = Array.from(rowElement.querySelectorAll('input'));
+        const invalid = inputs.find(function(input) {
+          return !input.reportValidity();
+        });
+
+        return !invalid;
+      }
+
+      function renderGroupSuggestions(rowNumber, cell) {
+        const input = cell.querySelector('.group-input');
+        const suggestions = cell.querySelector('.suggestions');
+        const query = normalizeSearch(input.value);
+        const selected = state.selectedGroupsByRow[rowNumber] || [];
+
+        if (!query) {
+          suggestions.style.display = 'none';
+          suggestions.innerHTML = '';
+          return;
+        }
+
+        const matches = state.groups
+          .filter(function(group) {
+            return selected.indexOf(group.id) === -1 &&
+              normalizeSearch([group.id, group.name, group.tag].join(' ')).indexOf(query) !== -1;
+          })
+          .slice(0, 12);
+
+        suggestions.innerHTML = '';
+        matches.forEach(function(group) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'suggestion';
+          button.textContent = group.id + ' · ' + (group.tag || group.name);
+          button.addEventListener('click', function() {
+            addGroup(rowNumber, group, cell);
+          });
+          suggestions.appendChild(button);
+        });
+
+        suggestions.style.display = matches.length ? 'block' : 'none';
+      }
+
+      function addGroup(rowNumber, group, cell) {
+        state.selectedGroupsByRow[rowNumber].push(group.id);
+        cell.querySelector('.group-input').value = '';
+        cell.querySelector('.suggestions').style.display = 'none';
+        renderChips(rowNumber, cell);
+      }
+
+      function renderChips(rowNumber, cell) {
+        const chips = cell.querySelector('.chips');
+        const selected = state.selectedGroupsByRow[rowNumber] || [];
+        chips.innerHTML = '';
+
+        selected.forEach(function(groupId) {
+          const group = state.groups.find(function(item) {
+            return item.id === groupId;
+          }) || { id: groupId, tag: groupId, name: groupId };
+
+          const chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.textContent = group.tag || group.name || group.id;
+
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.textContent = 'x';
+          remove.setAttribute('aria-label', 'Treure grup ' + group.id);
+          remove.addEventListener('click', function() {
+            state.selectedGroupsByRow[rowNumber] = selected.filter(function(id) {
+              return id !== groupId;
+            });
+            renderChips(rowNumber, cell);
+          });
+
+          chip.appendChild(remove);
+          chips.appendChild(chip);
+        });
+      }
+
+      function closeSuggestionsOnOutsideClick(event) {
+        if (event.target.closest('.group-picker')) return;
+        document.querySelectorAll('.suggestions').forEach(function(el) {
+          el.style.display = 'none';
+        });
+      }
+
+      function getRowElement(rowNumber) {
+        return document.querySelector('tr[data-row-number="' + rowNumber + '"]');
+      }
+
+      function setGlobalStatus(text, type) {
+        statusEl.textContent = text;
+        statusEl.className = 'status' + (type ? ' ' + type : '');
+      }
+
+      function setRowStatus(el, text, type) {
+        el.textContent = text;
+        el.className = 'row-status' + (type ? ' ' + type : '');
+      }
+
+      function getErrorMessage(error) {
+        return error && error.message ? error.message : 'S ha produit un error.';
+      }
+
+      function normalizeSearch(value) {
+        return String(value || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase();
+      }
+    </script>
+  </body>
+</html>

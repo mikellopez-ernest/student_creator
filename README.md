@@ -9,6 +9,7 @@ Each Apps Script project lives in its own folder, with its own source files, cla
 | Folder | Apps Script project | Purpose |
 | --- | --- | --- |
 | `secretaria_form/` | `secretaria_form` | First GAS project. Uses Dinantia API credentials and the shared spreadsheet database registry. |
+| `students_creator_panel/` | `students_creator_panel` | Admin panel for processing pending student creation rows. |
 
 ## Shared Documentation
 

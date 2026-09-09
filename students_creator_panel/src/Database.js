@@ -37,38 +37,20 @@ function getHeaderIndexMap_(sheet) {
   }, {});
 }
 
-function appendObjectByHeaders_(sheet, data, requiredHeaders) {
+function requireHeaders_(sheet, headers) {
   const headerIndexMap = getHeaderIndexMap_(sheet);
-  const normalizedData = {};
-
-  Object.keys(data).forEach(function(key) {
-    normalizedData[normalizeHeader_(key)] = data[key];
-  });
-
-  requiredHeaders.forEach(function(header) {
+  headers.forEach(function(header) {
     const key = normalizeHeader_(header);
     if (!(key in headerIndexMap)) {
       throw new Error('Required header not found in sheet "' + sheet.getName() + '": ' + header);
     }
   });
+  return headerIndexMap;
+}
 
-  const row = new Array(sheet.getLastColumn()).fill('');
-  Object.keys(normalizedData).forEach(function(key) {
-    if (key in headerIndexMap) {
-      row[headerIndexMap[key]] = normalizedData[key];
-    }
-  });
-
-  const targetRow = sheet.getLastRow() + 1;
-  const range = sheet.getRange(targetRow, 1, 1, row.length);
-
-  row.forEach(function(value, index) {
-    if (typeof value === 'string' && value.charAt(0) === '+') {
-      sheet.getRange(targetRow, index + 1).setNumberFormat('@');
-    }
-  });
-
-  range.setValues([row]);
+function setCellByHeader_(sheet, rowNumber, headerName, value) {
+  const headerIndexMap = requireHeaders_(sheet, [headerName]);
+  sheet.getRange(rowNumber, headerIndexMap[normalizeHeader_(headerName)] + 1).setValue(value);
 }
 
 function normalizeHeader_(value) {
@@ -79,14 +61,27 @@ function normalizeHeader_(value) {
     .toLowerCase();
 }
 
-function normalizeCode_(value) {
+function normalizeText_(value) {
   return String(value || '')
     .trim()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase();
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function normalizeCode_(value) {
+  return normalizeText_(value).toUpperCase();
+}
+
+function normalizeEmailLocalPart_(value) {
+  return normalizeText_(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
 }
 
 function parseBoolean_(value) {
   return value === true || String(value || '').trim().toUpperCase() === 'TRUE';
+}
+
+function cleanText_(value) {
+  return String(value || '').trim();
 }

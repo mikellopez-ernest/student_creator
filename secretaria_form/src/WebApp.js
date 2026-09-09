@@ -25,7 +25,7 @@ function submitNewStudentForm(payload) {
   const config = getNewStudentConfig_();
   const student = sanitizeStudentPayload_(payload);
   const contacts = sanitizeContactsPayload_(payload);
-  const selectedCourseConfig = findSelectedCourseConfig_(config, student.level);
+  findSelectedCourseConfig_(config, student.level);
 
   const dinantiaSpreadsheet = openLogicalTableSpreadsheet_(NEW_STUDENT_TABLE_NAME_);
   const studentSheet = getRequiredSheet_(dinantiaSpreadsheet, NEW_STUDENT_SHEET_NAME_);
@@ -49,7 +49,7 @@ function submitNewStudentForm(payload) {
     }, ['id', 'full_name', 'email', 'phone', 'relation']);
   });
 
-  sendNewStudentNotification_(student, contacts, selectedCourseConfig);
+  sendNewStudentNotification_(student, contacts);
 
   return {
     ok: true,
@@ -91,7 +91,7 @@ function sanitizeContactsPayload_(payload) {
     const contact = {
       fullName: cleanText_(rawContact.fullName),
       email: cleanText_(rawContact.email).toLowerCase(),
-      phone: cleanText_(rawContact.phone),
+      phone: normalizePhone_(rawContact.phone),
       relation: cleanText_(rawContact.relation)
     };
 
@@ -127,14 +127,9 @@ function getNewStudentConfig_() {
   const sheet = getRequiredSheet_(dinantiaSpreadsheet, NEW_STUDENT_CONFIG_SHEET_NAME_);
   const headerIndexMap = getHeaderIndexMap_(sheet);
   const coursesIndex = headerIndexMap[normalizeHeader_('courses')];
-  const emailCoordIndex = headerIndexMap[normalizeHeader_('email_coord')];
 
   if (coursesIndex === undefined) {
     throw new Error('Required header not found in sheet "' + NEW_STUDENT_CONFIG_SHEET_NAME_ + '": courses');
-  }
-
-  if (emailCoordIndex === undefined) {
-    throw new Error('Required header not found in sheet "' + NEW_STUDENT_CONFIG_SHEET_NAME_ + '": email_coord');
   }
 
   const lastRow = sheet.getLastRow();
@@ -146,8 +141,7 @@ function getNewStudentConfig_() {
   const config = values
     .map(function(row) {
       return {
-        course: cleanText_(row[coursesIndex]),
-        emailCoord: cleanText_(row[emailCoordIndex]).toLowerCase()
+        course: cleanText_(row[coursesIndex])
       };
     })
     .filter(function(row) {
@@ -171,31 +165,22 @@ function findSelectedCourseConfig_(config, selectedCourse) {
     throw new Error('El nivell seleccionat no es valid.');
   }
 
-  if (!match.emailCoord) {
-    throw new Error('No hi ha cap email_coord configurat per al nivell seleccionat: ' + selected + '.');
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(match.emailCoord)) {
-    throw new Error('L email_coord configurat per al nivell seleccionat no es valid.');
-  }
-
   return match;
 }
 
-function sendNewStudentNotification_(student, contacts, selectedCourseConfig) {
+function sendNewStudentNotification_(student, contacts) {
   const recipients = uniqueEmails_([
-    selectedCourseConfig.emailCoord,
     DIRECTIVE_TEAM_EMAIL_
   ]);
 
   MailApp.sendEmail({
     to: recipients.join(','),
     subject: 'Nou alumne pendent de crear: ' + student.name + ' ' + student.surname1,
-    body: buildNewStudentNotificationBody_(student, contacts, selectedCourseConfig)
+    body: buildNewStudentNotificationBody_(student, contacts)
   });
 }
 
-function buildNewStudentNotificationBody_(student, contacts, selectedCourseConfig) {
+function buildNewStudentNotificationBody_(student, contacts) {
   const lines = [
     'S ha rebut una nova sol licitud de creacio d alumne.',
     '',
@@ -204,7 +189,7 @@ function buildNewStudentNotificationBody_(student, contacts, selectedCourseConfi
     'Nom: ' + student.name,
     'Cognom 1: ' + student.surname1,
     'Cognom 2: ' + (student.surname2 || '-'),
-    'Nivell: ' + selectedCourseConfig.course,
+    'Nivell: ' + student.level,
     '',
     'Familiars:'
   ];
@@ -223,6 +208,21 @@ function buildNewStudentNotificationBody_(student, contacts, selectedCourseConfi
   }
 
   return lines.join('\n');
+}
+
+function normalizePhone_(value) {
+  const raw = cleanText_(value);
+  const compact = raw.replace(/[\s.-]/g, '');
+
+  if (/^[6789]\d{8}$/.test(compact)) {
+    return '+34' + compact;
+  }
+
+  if (/^\+34[6789]\d{8}$/.test(compact)) {
+    return compact;
+  }
+
+  throw new Error('El telefon ha de tenir 9 numeros i comencar per 6, 7, 8 o 9. Pots escriure, per exemple, 666221996 o +34666221996.');
 }
 
 function uniqueEmails_(emails) {
