@@ -62,13 +62,14 @@ Logs include safe operational metadata only, such as row number, student id, sel
 
 ## Access Control
 
-The web app is server-side protected. Access is allowed for signed-in users who are either:
+The web app is domain-restricted and also checks `access_granted` on the server. That property can contain:
 
-- In Google Workspace OU `/Administradors`
-- Google Workspace admins
-- Google Workspace delegated admins
+- Direct institutional emails.
+- Càrrecs from `Càrrega lectiva -> carrecs`, resolved through `Càrrega lectiva -> professors`.
 
-Every server-side action repeats the admin check.
+Protected server entry points are `doGet()`, `getPanelData()`, `checkGoogleEmailAvailability(email)`, and `createStudentAccounts(request)`.
+
+If access is denied while opening the panel, the user sees an `Acces no autoritzat` page. If access is denied during a browser action, the server method returns an error to the panel.
 
 ## Script Properties
 
@@ -77,6 +78,7 @@ Required:
 | Property | Meaning |
 | --- | --- |
 | `db` | Spreadsheet ID of the shared database registry |
+| `access_granted` | Comma-separated allowed direct emails and/or càrrecs from `Càrrega lectiva -> carrecs` |
 | `dinantia_api_user` | Dinantia API user |
 | `dinantia_api_secret` | Dinantia API secret |
 
@@ -93,7 +95,7 @@ Deployment settings are defined in `src/appsscript.json`:
 | Setting | Value |
 | --- | --- |
 | Execute as | Deploying user |
-| Who has access | Domain users |
+| Who has access | Domain users, then server-side filtered by `access_granted` |
 
 Keep redeploying the existing deployment ID after the first web app deployment so the URL remains stable.
 
@@ -121,3 +123,6 @@ npm run open
 - `docs/SPEC.md`
 - `docs/DEPLOYMENT.md`
 - `docs/DINANTIA_STUDENT_CREATION.md`
+- `../docs/ACCESS_CONTROL.md`
+- `../docs/SHARED_SPREADSHEET_DATABASE.md`
+- `../docs/DINANTIA_API_NOTES.md`

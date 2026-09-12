@@ -1,18 +1,5 @@
 function requireAdmin_() {
-  const email = cleanText_(Session.getActiveUser().getEmail()).toLowerCase();
-  if (!email || !email.endsWith('@' + CONFIG_.allowedEmailDomain)) {
-    throw new Error('Aquest panell nomes esta disponible per a usuaris @' + CONFIG_.allowedEmailDomain + '.');
-  }
-
-  const user = AdminDirectory.Users.get(email);
-  const isInAdminOu = user && user.orgUnitPath === CONFIG_.adminOrgUnitPath;
-  const isGoogleAdmin = user && (user.isAdmin || user.isDelegatedAdmin);
-
-  if (!isInAdminOu && !isGoogleAdmin) {
-    throw new Error('No tens permisos per accedir a aquest panell.');
-  }
-
-  return email;
+  return assertUserAccess_().email;
 }
 
 function googleUserExists_(email) {

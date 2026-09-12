@@ -38,8 +38,23 @@ The manifest contains:
 
 This means:
 
-- Accessible by domain users.
+- Accessible by domain users at the Apps Script layer.
 - Executed as the user who deployed the version.
+
+The code then applies the `access_granted` server-side allow-list before rendering the panel or accepting browser actions.
+
+## Access-Control Properties
+
+Before deploying or testing, confirm these script properties exist:
+
+| Property | Purpose |
+| --- | --- |
+| `db` | Resolves the registry spreadsheet and the `Càrrega lectiva` table used for role lookups. |
+| `access_granted` | Comma-separated direct emails and/or càrrecs allowed to use the panel. |
+
+If `access_granted` is missing or empty, the deployed panel shows `Acces no autoritzat`.
+
+Run `grantRequiredPermissions()` manually if Apps Script asks the deploying user to authorize access to `Càrrega lectiva`.
 
 Because the panel creates Google Workspace users and calls Dinantia, the deploying user must have the needed Admin Directory permissions and Dinantia API credentials in script properties.
 

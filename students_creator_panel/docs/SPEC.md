@@ -15,7 +15,7 @@ The panel reads the shared database tables, lets an authorized admin review and 
 | Deployment ID | `AKfycbzYJNtJmhqx7vNR4pU0GXQrBdCTBmg8Lvtr2JLDYecbNRNDoQYxYhf7UyHcuWerUFNEuA` |
 | Web app URL | `https://script.google.com/a/macros/iernestlluch.cat/s/AKfycbzYJNtJmhqx7vNR4pU0GXQrBdCTBmg8Lvtr2JLDYecbNRNDoQYxYhf7UyHcuWerUFNEuA/exec` |
 | Execute as | Deploying user |
-| Access | Domain users |
+| Access | Domain users, then server-side filtered by `access_granted` |
 
 Future deployments must redeploy this existing deployment ID so the URL remains stable.
 
@@ -26,6 +26,7 @@ Required Apps Script script properties:
 | Property | Meaning |
 | --- | --- |
 | `db` | Spreadsheet ID of the shared database registry. |
+| `access_granted` | Comma-separated allowed direct emails and/or càrrecs from `Càrrega lectiva -> carrecs`. |
 | `dinantia_api_user` | Dinantia API user. |
 | `dinantia_api_secret` | Dinantia API secret. |
 
@@ -95,19 +96,35 @@ Course routing configuration.
 
 ## Access Control
 
-`doGet()` and every server-side action call `requireAdmin_()`.
+`doGet()` and every server-side action use the shared access-control helpers in `AccessControl.js`.
 
-The admin check:
+Access is allowed only when:
 
-1. Reads the active user with `Session.getActiveUser().getEmail()`.
-2. Requires the email to end with `@iernestlluch.cat`.
-3. Reads the Google Workspace user with `AdminDirectory.Users.get(email)`.
-4. Allows access when either:
-   - `orgUnitPath` is `/Administradors`
-   - `isAdmin` is true
-   - `isDelegatedAdmin` is true
+1. The deployed web app receives a signed-in domain user.
+2. `Session.getActiveUser().getEmail()` returns an email.
+3. The email appears directly in `access_granted`, or belongs to a person assigned to one of the allowed càrrecs.
+
+Role resolution:
+
+1. Non-email entries in `access_granted` match `Càrrega lectiva -> carrecs` column A.
+2. Assigned people are read from `carrecs` column D.
+3. Institutional emails are resolved by matching those names against `Càrrega lectiva -> professors` column Q and reading column L.
 
 This must remain server-side. The browser UI is not trusted for permissions.
+
+Protected server entry points:
+
+- `doGet()`
+- `getPanelData()`
+- `checkGoogleEmailAvailability(email)`
+- `createStudentAccounts(request)`
+
+Denied access behavior:
+
+- `doGet()` renders an `Acces no autoritzat` page.
+- Browser-callable server methods throw an error returned to the panel.
+
+`grantRequiredPermissions()` touches the script properties, active user email, and the `Càrrega lectiva` lookup sheets so the deploying user can authorize the required scopes.
 
 ## Panel UI
 
@@ -138,7 +155,7 @@ Table columns:
 When the page opens:
 
 1. Browser calls `getPanelData()`.
-2. Server checks admin access.
+2. Server checks access.
 3. Server reads pending student rows from `Dinantia -> new_student_form`.
 4. Server reads contact rows from `Dinantia -> new_student_form_contacts`.
 5. Server groups contacts by student `id`.
@@ -178,7 +195,7 @@ Email normalization for suggestions:
 
 The `Comprova` button calls `checkGoogleEmailAvailability(email)`, which:
 
-1. Repeats admin access control.
+1. Repeats access control.
 2. Requires `@iernestlluch.cat`.
 3. Calls `AdminDirectory.Users.get(email)`.
 4. Returns available/not available.
@@ -266,7 +283,7 @@ Request payload:
 
 Server sequence:
 
-1. Check admin access.
+1. Check access.
 2. Normalize and validate institutional email.
 3. Normalize selected Dinantia group IDs.
 4. Load the source student row by row number.
@@ -429,7 +446,7 @@ OAuth scopes:
 | `script.send_mail` | Send completion notification email. |
 | `spreadsheets` | Read/write shared database sheets. |
 | `admin.directory.user` | Create Google Workspace users. |
-| `admin.directory.user.readonly` | Read users for admin checks and email availability checks. |
+| `admin.directory.user.readonly` | Read users for email availability checks. |
 
 ## Files
 
@@ -437,7 +454,8 @@ OAuth scopes:
 | --- | --- |
 | `src/AdminPanel.html` | Admin table UI, editable contacts, group picker, row actions. |
 | `src/Panel.js` | Main server-side panel actions and creation workflow. |
-| `src/Workspace.js` | Admin access control and Google Workspace user operations. |
+| `src/AccessControl.js` | Shared role/email access decision, no-access page, and permission helper. |
+| `src/Workspace.js` | Google Workspace user operations and compatibility wrapper for server-side access checks. |
 | `src/DinantiaClient.js` | Dinantia API client, group loading, account checks, student creation. |
 | `src/Database.js` | Shared spreadsheet registry and header helpers. |
 | `src/Config.js` | Local constants: sheet names, OU paths, domains, defaults. |

@@ -121,9 +121,9 @@ const values = sheet.getDataRange().getValues();
 | Logical table | Known sheets |
 | --- | --- |
 | `Dades de professors` | `Llista`, `leave_absence` |
-| `Càrrega lectiva` | `assignatures`, `carrecs` |
+| `Càrrega lectiva` | `assignatures`, `carrecs`, `professors` |
 | `Horaris` | `GPU001` |
-| `Dinantia` | `dinantia_2_dades_alumnes`, `teachers_2_dinantia`, `contacts_cache` |
+| `Dinantia` | `dinantia_2_dades_alumnes`, `teachers_2_dinantia`, `contacts_cache`, `new_student_form`, `new_student_form_contacts`, `new_student_config` |
 | `Grades` | `subjects_cache`, `avaluacions`, generated or task-specific sheets |
 
 Note: when writing Apps Script code or user-facing table references, preserve the exact registered logical table name, including accents, if the registry uses them.
@@ -140,6 +140,7 @@ Note: when writing Apps Script code or user-facing table references, preserve th
 8. Header matching should be tolerant of spaces, case, and accents when possible.
 9. Boolean readers should accept both real boolean `true` and string `"TRUE"`.
 10. Do not log, display, or commit secrets.
+11. Access-control role lookups also resolve through this registry, using logical table `Càrrega lectiva`.
 
 The universal chain is:
 

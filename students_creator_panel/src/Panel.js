@@ -1,5 +1,6 @@
 function doGet() {
-  requireAdmin_();
+  const access = getAccessDecision_();
+  if (!access.allowed) return createAccessDeniedOutput_(access);
 
   return HtmlService
     .createHtmlOutputFromFile('AdminPanel')

@@ -22,7 +22,7 @@ The downstream account creation workflow is handled by `students_creator_panel`.
 | Deployment ID | `AKfycbzN13M7Lx3PE6QJWszTFWXRYxtjV6wKjSXoso6Qiiy81ie6oWELXjoEeBkN9UxRIoKcZg` |
 | Web app URL | `https://script.google.com/a/macros/iernestlluch.cat/s/AKfycbzN13M7Lx3PE6QJWszTFWXRYxtjV6wKjSXoso6Qiiy81ie6oWELXjoEeBkN9UxRIoKcZg/exec` |
 | Execute as | Deploying user |
-| Access | Domain users |
+| Access | Domain users, then server-side filtered by `access_granted` |
 
 Future deployments must redeploy this existing deployment ID so the URL remains stable.
 
@@ -33,6 +33,7 @@ Required Apps Script script properties:
 | Property | Meaning |
 | --- | --- |
 | `db` | Spreadsheet ID of the shared database registry. |
+| `access_granted` | Comma-separated allowed direct emails and/or càrrecs from `Càrrega lectiva -> carrecs`. |
 | `dinantia_api_user` | Present in the project, but not used by this public form flow. |
 | `dinantia_api_secret` | Present in the project, but not used by this public form flow. |
 
@@ -143,17 +144,31 @@ Allowed relation values:
 
 ## Access Control
 
-Every entry point calls `assertAllowedUser_()`.
+Every entry point uses the shared access-control helpers in `AccessControl.js`.
 
 Access is allowed only when:
 
-1. `Session.getActiveUser().getEmail()` returns an email.
-2. The email ends with `@iernestlluch.cat`.
+1. The deployed web app receives a signed-in domain user.
+2. `Session.getActiveUser().getEmail()` returns an email.
+3. The email appears directly in `access_granted`, or belongs to a person assigned to one of the allowed càrrecs.
+
+Role resolution:
+
+1. Non-email entries in `access_granted` match `Càrrega lectiva -> carrecs` column A.
+2. Assigned people are read from `carrecs` column D.
+3. Institutional emails are resolved by matching those names against `Càrrega lectiva -> professors` column Q and reading column L.
 
 The same check runs in:
 
 - `doGet()`
 - `submitNewStudentForm(payload)`
+
+Denied access behavior:
+
+- `doGet()` renders an `Acces no autoritzat` page.
+- `submitNewStudentForm(payload)` throws a server error returned to the browser.
+
+`grantRequiredPermissions()` touches the script properties, active user email, and the `Càrrega lectiva` lookup sheets so the deploying user can authorize the required scopes.
 
 ## Validation
 
@@ -236,13 +251,14 @@ The manifest declares:
 | `script.container.ui` | Spreadsheet UI menu helper in `Code.js`. |
 | `script.send_mail` | Send directive-team notification. |
 | `spreadsheets` | Read config and append rows to shared database sheets. |
-| `userinfo.email` | Read active user email for domain access control. |
+| `userinfo.email` | Read active user email for role-based access control. |
 
 ## Files
 
 | File | Responsibility |
 | --- | --- |
 | `src/WebApp.js` | Web app entry points, validation, database writes, notification email. |
+| `src/AccessControl.js` | Shared role/email access decision, no-access page, and permission helper. |
 | `src/NewStudentForm.html` | Browser form UI and client-side validation. |
 | `src/Database.js` | Shared spreadsheet registry helpers and header-based append helper. |
 | `src/DinantiaClient.js` | Dinantia auth/header helpers; currently not used by this public flow. |

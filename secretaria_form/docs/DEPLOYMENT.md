@@ -38,7 +38,22 @@ The manifest contains:
 
 This means:
 
-- Accessible by domain users.
+- Accessible by domain users at the Apps Script layer.
 - Executed as the user who deployed the version.
+
+The code then applies the `access_granted` server-side allow-list before rendering the app or accepting form submissions.
+
+## Access-Control Properties
+
+Before deploying or testing, confirm these script properties exist:
+
+| Property | Purpose |
+| --- | --- |
+| `db` | Resolves the registry spreadsheet and the `Càrrega lectiva` table used for role lookups. |
+| `access_granted` | Comma-separated direct emails and/or càrrecs allowed to use the form. |
+
+If `access_granted` is missing or empty, the deployed app shows `Acces no autoritzat`.
+
+Run `grantRequiredPermissions()` manually if Apps Script asks the deploying user to authorize access to `Càrrega lectiva`.
 
 Keep `.clasp.json` local and uncommitted.

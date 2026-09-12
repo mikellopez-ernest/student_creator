@@ -2,11 +2,11 @@ const NEW_STUDENT_TABLE_NAME_ = 'Dinantia';
 const NEW_STUDENT_SHEET_NAME_ = 'new_student_form';
 const NEW_STUDENT_CONTACTS_SHEET_NAME_ = 'new_student_form_contacts';
 const NEW_STUDENT_CONFIG_SHEET_NAME_ = 'new_student_config';
-const ALLOWED_EMAIL_DOMAIN_ = 'iernestlluch.cat';
 const DIRECTIVE_TEAM_EMAIL_ = 'equip_directiu@iernestlluch.cat';
 
 function doGet() {
-  assertAllowedUser_();
+  const access = getAccessDecision_();
+  if (!access.allowed) return createAccessDeniedOutput_(access);
 
   const template = HtmlService.createTemplateFromFile('NewStudentForm');
   template.courses = getNewStudentConfig_().map(function(config) {
@@ -20,7 +20,7 @@ function doGet() {
 }
 
 function submitNewStudentForm(payload) {
-  assertAllowedUser_();
+  assertUserAccess_();
 
   const config = getNewStudentConfig_();
   const student = sanitizeStudentPayload_(payload);
@@ -57,13 +57,6 @@ function submitNewStudentForm(payload) {
     studentId: student.id,
     contacts: contacts.length
   };
-}
-
-function assertAllowedUser_() {
-  const email = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
-  if (!email || !email.endsWith('@' + ALLOWED_EMAIL_DOMAIN_)) {
-    throw new Error('Aquest formulari nomes esta disponible per a usuaris @' + ALLOWED_EMAIL_DOMAIN_ + '.');
-  }
 }
 
 function sanitizeStudentPayload_(payload) {

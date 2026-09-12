@@ -37,6 +37,7 @@ This Apps Script project already has the required properties configured:
 | Property | Meaning |
 | --- | --- |
 | `db` | Spreadsheet ID of the shared database registry |
+| `access_granted` | Comma-separated allowed direct emails and/or càrrecs from `Càrrega lectiva -> carrecs` |
 | `dinantia_api_user` | Dinantia API user |
 | `dinantia_api_secret` | Dinantia API secret |
 
@@ -62,7 +63,7 @@ Deployment settings should be:
 | Setting | Value |
 | --- | --- |
 | Execute as | `admindomini@iernestlluch.cat` |
-| Who has access | Any `iernestlluch.cat` user |
+| Who has access | Domain users, then server-side filtered by `access_granted` |
 
 Current web app deployment:
 
@@ -91,10 +92,19 @@ Relative phone numbers are normalized before saving:
 
 Phone cells are written as plain text so Google Sheets keeps the leading `+`.
 
+## Access Control
+
+The web app is domain-restricted and also checks `access_granted` on the server. That property can contain direct institutional emails and/or càrrecs from `Càrrega lectiva -> carrecs`; càrrecs are resolved through `Càrrega lectiva -> professors` to institutional emails.
+
+Both `doGet()` and `submitNewStudentForm(payload)` enforce the same check.
+
+If access is denied while opening the app, the user sees an `Acces no autoritzat` page. If access is denied during submission, the server method returns an error to the form.
+
 ## Shared References
 
 - `../docs/SHARED_SPREADSHEET_DATABASE.md`
 - `../docs/DINANTIA_API_NOTES.md`
+- `../docs/ACCESS_CONTROL.md`
 
 ## Local Documentation
 

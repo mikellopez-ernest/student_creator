@@ -9,6 +9,7 @@ function checkConfiguration() {
   const properties = PropertiesService.getScriptProperties();
   const required = [
     'db',
+    'access_granted',
     'dinantia_api_user',
     'dinantia_api_secret'
   ];
