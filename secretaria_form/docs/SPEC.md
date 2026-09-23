@@ -81,6 +81,7 @@ One row is appended per submitted student.
 | `surname1` | Yes | `Cognom 1` |
 | `surname2` | Yes as a sheet header, optional value | `Cognom 2` |
 | `level` | Yes | `Nivell` selected from `new_student_config.courses` |
+| `comment` | Yes as a sheet header, optional value | `Comentaris` |
 | `managed` | No write on submit | Left empty/null until the admin panel completes processing. |
 
 ### `Dinantia -> new_student_form_contacts`
@@ -118,6 +119,8 @@ The student block is a vertical one-column form with these fields:
 | `Nivell` | Dropdown from `new_student_config.courses` | Yes |
 
 The mandatory marker `*` appears inline next to the field label.
+
+The form also includes an optional `Comentaris` textarea after the relatives section and before the submit button.
 
 Below the student block, the UI shows:
 
@@ -238,6 +241,7 @@ Body includes:
 - First surname
 - Second surname, or `-`
 - Level
+- Comments, or `-`
 - Every contact full name, email, phone, and relation
 
 The form no longer sends directly to course coordinators. Course-specific notifications are sent later by `students_creator_panel` after the accounts are created.

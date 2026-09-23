@@ -30,14 +30,17 @@ function submitNewStudentForm(payload) {
   const dinantiaSpreadsheet = openLogicalTableSpreadsheet_(NEW_STUDENT_TABLE_NAME_);
   const studentSheet = getRequiredSheet_(dinantiaSpreadsheet, NEW_STUDENT_SHEET_NAME_);
   const contactsSheet = getRequiredSheet_(dinantiaSpreadsheet, NEW_STUDENT_CONTACTS_SHEET_NAME_);
-
-  appendObjectByHeaders_(studentSheet, {
+  const commentHeader = getStudentCommentHeader_(studentSheet);
+  const studentRow = {
     id: student.id,
     name: student.name,
     surname1: student.surname1,
     surname2: student.surname2,
     level: student.level
-  }, ['id', 'name', 'surname1', 'surname2', 'level']);
+  };
+  studentRow[commentHeader] = student.comment;
+
+  appendObjectByHeaders_(studentSheet, studentRow, ['id', 'name', 'surname1', 'surname2', 'level', commentHeader]);
 
   contacts.forEach(function(contact) {
     appendObjectByHeaders_(contactsSheet, {
@@ -66,7 +69,8 @@ function sanitizeStudentPayload_(payload) {
     name: cleanText_(raw.name),
     surname1: cleanText_(raw.surname1),
     surname2: cleanText_(raw.surname2),
-    level: cleanText_(raw.level)
+    level: cleanText_(raw.level),
+    comment: cleanText_(raw.comment)
   };
 
   requireField_(student.id, 'Identificador de l alumne');
@@ -161,6 +165,13 @@ function findSelectedCourseConfig_(config, selectedCourse) {
   return match;
 }
 
+function getStudentCommentHeader_(studentSheet) {
+  const headerIndexMap = getHeaderIndexMap_(studentSheet);
+  if (headerIndexMap[normalizeHeader_('comment')] !== undefined) return 'comment';
+  if (headerIndexMap[normalizeHeader_('comments')] !== undefined) return 'comments';
+  throw new Error('Required header not found in sheet "' + NEW_STUDENT_SHEET_NAME_ + '": comment');
+}
+
 function sendNewStudentNotification_(student, contacts) {
   const recipients = uniqueEmails_([
     DIRECTIVE_TEAM_EMAIL_
@@ -183,6 +194,7 @@ function buildNewStudentNotificationBody_(student, contacts) {
     'Cognom 1: ' + student.surname1,
     'Cognom 2: ' + (student.surname2 || '-'),
     'Nivell: ' + student.level,
+    'Comentaris: ' + (student.comment || '-'),
     '',
     'Familiars:'
   ];

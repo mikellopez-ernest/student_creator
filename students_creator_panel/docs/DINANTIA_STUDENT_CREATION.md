@@ -60,7 +60,7 @@ Current payload:
 ```javascript
 {
   id: student.id,
-  name: buildFullName_(student),
+  name: buildDinantiaStudentName_(student),
   email: institutionalEmail,
   gender: 'other',
   language: 'ca_ES',
@@ -74,6 +74,18 @@ Current payload:
 ```
 
 `student.id` is the identifier submitted in `secretaria_form`.
+
+The Dinantia student `name` is formatted as:
+
+```text
+surname1 + " " + surname2 + ", " + name
+```
+
+If `surname2` is empty, the format becomes:
+
+```text
+surname1 + ", " + name
+```
 
 ## Parent Payload
 

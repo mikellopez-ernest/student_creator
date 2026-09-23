@@ -146,6 +146,16 @@
         background: #d5e1e5;
       }
 
+      .danger-button {
+        background: #fff2f0;
+        color: var(--danger);
+        border: 1px solid #f0b7b2;
+      }
+
+      .danger-button:hover {
+        background: #ffe3df;
+      }
+
       .student-name {
         margin: 0 0 4px;
         font-weight: 700;
@@ -154,6 +164,15 @@
       .line {
         margin: 0;
         color: var(--muted);
+      }
+
+      .comment {
+        margin: 8px 0 0;
+        padding: 8px;
+        border-left: 3px solid var(--primary);
+        background: #f2f7f8;
+        color: var(--text);
+        white-space: pre-wrap;
       }
 
       .contacts {
@@ -261,6 +280,7 @@
         margin: 0;
         color: var(--muted);
         font-weight: 700;
+        white-space: pre-wrap;
       }
 
       .row-status.error {
@@ -386,11 +406,18 @@
         td.innerHTML = [
           '<p class="student-name"></p>',
           '<p class="line"></p>',
+          '<p class="comment"></p>',
           '<div class="contacts"></div>'
         ].join('');
 
         td.querySelector('.student-name').textContent = row.fullName;
         td.querySelector('.line').textContent = row.level;
+        const commentEl = td.querySelector('.comment');
+        if (row.comment) {
+          commentEl.textContent = 'Comentaris: ' + row.comment;
+        } else {
+          commentEl.remove();
+        }
 
         const contactsEl = td.querySelector('.contacts');
         if (!contacts.length) {
@@ -430,6 +457,7 @@
           '<input type="email" class="email-input">',
           '<div class="inline">',
           '<button type="button" class="secondary check-email-button">Comprova</button>',
+          '<button type="button" class="secondary generate-email-button">Generar només correu</button>',
           '</div>',
           '<p class="row-status email-status"></p>',
           '</div>'
@@ -438,6 +466,9 @@
         td.querySelector('.email-input').value = row.suggestedEmail;
         td.querySelector('.check-email-button').addEventListener('click', function() {
           checkEmail(row.rowNumber);
+        });
+        td.querySelector('.generate-email-button').addEventListener('click', function() {
+          generateEmailOnly(row.rowNumber);
         });
 
         return td;
@@ -453,10 +484,19 @@
           '<div class="suggestions"></div>',
           '</div>',
           '<p class="line">ID Dinantia: <strong></strong></p>',
+          '<button type="button" class="secondary check-dinantia-button">Comprova</button>',
+          '<button type="button" class="secondary generate-dinantia-button">Generar només usuari dinantia</button>',
+          '<p class="row-status dinantia-status"></p>',
           '</div>'
         ].join('');
 
         td.querySelector('strong').textContent = row.id;
+        td.querySelector('.check-dinantia-button').addEventListener('click', function() {
+          checkDinantia(row.rowNumber);
+        });
+        td.querySelector('.generate-dinantia-button').addEventListener('click', function() {
+          generateDinantiaOnly(row.rowNumber);
+        });
         const input = td.querySelector('.group-input');
         input.addEventListener('input', function() {
           renderGroupSuggestions(row.rowNumber, td);
@@ -473,12 +513,16 @@
         td.innerHTML = [
           '<div class="stack">',
           '<button type="button" class="generate-button">Generar</button>',
+          '<button type="button" class="danger-button archive-button">Arxivar</button>',
           '<p class="row-status action-status"></p>',
           '</div>'
         ].join('');
 
         td.querySelector('.generate-button').addEventListener('click', function() {
           generate(row.rowNumber);
+        });
+        td.querySelector('.archive-button').addEventListener('click', function() {
+          archiveRow(row.rowNumber);
         });
 
         return td;
@@ -488,26 +532,55 @@
         const tr = getRowElement(rowNumber);
         const button = tr.querySelector('.check-email-button');
         const status = tr.querySelector('.email-status');
-        const email = tr.querySelector('.email-input').value;
+        const row = state.rows.find(function(item) {
+          return item.rowNumber === rowNumber;
+        });
 
         button.disabled = true;
         setRowStatus(status, 'Comprovant...', '');
 
         google.script.run
           .withSuccessHandler(function(result) {
-            setRowStatus(status, result.available ? 'Correu disponible.' : 'Aquest correu ja existeix.', result.available ? 'success' : 'error');
+            const matches = result.matches || [];
+            if (matches.length) {
+              setRowStatus(status, 'Correus trobats:\n' + matches.join('\n'), 'error');
+            } else {
+              setRowStatus(status, 'No s han trobat correus amb aquest nom i cognom.', 'success');
+            }
             button.disabled = false;
           })
           .withFailureHandler(function(error) {
             setRowStatus(status, getErrorMessage(error), 'error');
             button.disabled = false;
           })
-          .checkGoogleEmailAvailability(email);
+          .checkGoogleEmailPrefixMatches(row ? row.emailSearchPrefix : '');
+      }
+
+      function checkDinantia(rowNumber) {
+        const tr = getRowElement(rowNumber);
+        const button = tr.querySelector('.check-dinantia-button');
+        const status = tr.querySelector('.dinantia-status');
+        const row = state.rows.find(function(item) {
+          return item.rowNumber === rowNumber;
+        });
+
+        button.disabled = true;
+        setRowStatus(status, 'Comprovant...', '');
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            setRowStatus(status, result.available ? 'ID Dinantia disponible.' : 'Aquest ID Dinantia ja existeix.', result.available ? 'success' : 'error');
+            button.disabled = false;
+          })
+          .withFailureHandler(function(error) {
+            setRowStatus(status, getErrorMessage(error), 'error');
+            button.disabled = false;
+          })
+          .checkDinantiaIdAvailability(row ? row.id : '');
       }
 
       function generate(rowNumber) {
         const tr = getRowElement(rowNumber);
-        const button = tr.querySelector('.generate-button');
         const status = tr.querySelector('.action-status');
         const email = tr.querySelector('.email-input').value;
         const groupIds = state.selectedGroupsByRow[rowNumber] || [];
@@ -515,28 +588,20 @@
 
         if (!validateRowInputs(tr)) return;
 
-        button.disabled = true;
+        setRowBusy(tr, true);
         setRowStatus(status, 'Generant...', '');
 
-        const timeoutId = window.setTimeout(function() {
-          setRowStatus(status, 'La generacio encara no ha respost. Revisa Execucions a Apps Script per veure en quin pas s ha quedat.', 'error');
-          button.disabled = false;
-        }, 120000);
-
+        const timeoutId = createWatchdog(tr, status);
         google.script.run
           .withSuccessHandler(function(result) {
             window.clearTimeout(timeoutId);
             setRowStatus(status, result.message, 'success');
-            tr.remove();
-            state.rows = state.rows.filter(function(row) {
-              return row.rowNumber !== rowNumber;
-            });
-            setGlobalStatus(state.rows.length ? state.rows.length + ' alumne(s) pendent(s).' : 'No hi ha alumnes pendents.', 'success');
+            removeRow(rowNumber);
           })
           .withFailureHandler(function(error) {
             window.clearTimeout(timeoutId);
             setRowStatus(status, getErrorMessage(error), 'error');
-            button.disabled = false;
+            setRowBusy(tr, false);
           })
           .createStudentAccounts({
             rowNumber: rowNumber,
@@ -544,6 +609,114 @@
             groupIds: groupIds,
             contacts: contacts
           });
+      }
+
+      function generateEmailOnly(rowNumber) {
+        const tr = getRowElement(rowNumber);
+        const status = tr.querySelector('.email-status');
+        const email = tr.querySelector('.email-input').value;
+        const contacts = getEditableContacts(tr);
+
+        if (!validateRowInputs(tr)) return;
+
+        setRowBusy(tr, true);
+        setRowStatus(status, 'Generant correu...', '');
+
+        const timeoutId = createWatchdog(tr, status);
+        google.script.run
+          .withSuccessHandler(function(result) {
+            window.clearTimeout(timeoutId);
+            setRowStatus(status, result.message, 'success');
+            setRowBusy(tr, false);
+          })
+          .withFailureHandler(function(error) {
+            window.clearTimeout(timeoutId);
+            setRowStatus(status, getErrorMessage(error), 'error');
+            setRowBusy(tr, false);
+          })
+          .createGoogleStudentAccountOnly({
+            rowNumber: rowNumber,
+            institutionalEmail: email,
+            contacts: contacts
+          });
+      }
+
+      function generateDinantiaOnly(rowNumber) {
+        const tr = getRowElement(rowNumber);
+        const status = tr.querySelector('.dinantia-status');
+        const email = tr.querySelector('.email-input').value;
+        const groupIds = state.selectedGroupsByRow[rowNumber] || [];
+        const contacts = getEditableContacts(tr);
+
+        if (!validateRowInputs(tr)) return;
+
+        setRowBusy(tr, true);
+        setRowStatus(status, 'Generant usuari Dinantia...', '');
+
+        const timeoutId = createWatchdog(tr, status);
+        google.script.run
+          .withSuccessHandler(function(result) {
+            window.clearTimeout(timeoutId);
+            setRowStatus(status, result.message, 'success');
+            setRowBusy(tr, false);
+          })
+          .withFailureHandler(function(error) {
+            window.clearTimeout(timeoutId);
+            setRowStatus(status, getErrorMessage(error), 'error');
+            setRowBusy(tr, false);
+          })
+          .createDinantiaStudentAccountOnly({
+            rowNumber: rowNumber,
+            institutionalEmail: email,
+            groupIds: groupIds,
+            contacts: contacts
+          });
+      }
+
+      function archiveRow(rowNumber) {
+        const tr = getRowElement(rowNumber);
+        const status = tr.querySelector('.action-status');
+
+        if (!window.confirm('Vols arxivar aquesta sol licitud?')) return;
+
+        setRowBusy(tr, true);
+        setRowStatus(status, 'Arxivant...', '');
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            setRowStatus(status, result.message, 'success');
+            removeRow(rowNumber);
+          })
+          .withFailureHandler(function(error) {
+            setRowStatus(status, getErrorMessage(error), 'error');
+            setRowBusy(tr, false);
+          })
+          .archiveStudentRequest({
+            rowNumber: rowNumber
+          });
+      }
+
+      function createWatchdog(rowElement, status) {
+        return window.setTimeout(function() {
+          setRowStatus(status, 'La generacio encara no ha respost. Revisa Execucions a Apps Script per veure en quin pas s ha quedat.', 'error');
+          setRowBusy(rowElement, false);
+        }, 120000);
+      }
+
+      function removeRow(rowNumber) {
+        const tr = getRowElement(rowNumber);
+        if (tr) tr.remove();
+        state.rows = state.rows.filter(function(row) {
+          return row.rowNumber !== rowNumber;
+        });
+        setGlobalStatus(state.rows.length ? state.rows.length + ' alumne(s) pendent(s).' : 'No hi ha alumnes pendents.', 'success');
+        if (!state.rows.length) renderTable();
+      }
+
+      function setRowBusy(rowElement, isBusy) {
+        Array.from(rowElement.querySelectorAll('button')).forEach(function(button) {
+          button.disabled = isBusy;
+        });
       }
 
       function getEditableContacts(rowElement) {

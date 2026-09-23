@@ -76,7 +76,7 @@ The web app stores submissions in:
 
 | Logical table notation | Data |
 | --- | --- |
-| `Dinantia -> new_student_form` | Student row with `id`, `name`, `surname1`, `surname2`, and `level` |
+| `Dinantia -> new_student_form` | Student row with `id`, `name`, `surname1`, `surname2`, `level`, and `comment` |
 | `Dinantia -> new_student_form_contacts` | Relative/contact rows linked by student `id` |
 | `Dinantia -> new_student_config` | Course dropdown options |
 

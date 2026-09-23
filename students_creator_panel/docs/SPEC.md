@@ -66,9 +66,10 @@ Source table for submitted student rows.
 | `surname1` | Yes | First surname. |
 | `surname2` | Yes as a header, optional value | Second surname. |
 | `level` | Yes | Selected course/level. Must match `new_student_config.courses`. |
+| `comment` | Yes as a header, optional value | Free-text comment submitted in `secretaria_form`; displayed in the panel. |
 | `managed` | Yes | Processing flag. Rows are displayed while this is not boolean/string `TRUE`. |
 
-When all processing succeeds, `managed` is set to `TRUE`.
+When the full creation flow succeeds, `managed` is set to `TRUE`. The `Arxivar` button also sets `managed` to `TRUE` without creating external accounts.
 
 ### `Dinantia -> new_student_form_contacts`
 
@@ -117,7 +118,12 @@ Protected server entry points:
 - `doGet()`
 - `getPanelData()`
 - `checkGoogleEmailAvailability(email)`
+- `checkGoogleEmailPrefixMatches(prefix)`
+- `checkDinantiaIdAvailability(id)`
 - `createStudentAccounts(request)`
+- `createGoogleStudentAccountOnly(request)`
+- `createDinantiaStudentAccountOnly(request)`
+- `archiveStudentRequest(request)`
 
 Denied access behavior:
 
@@ -145,10 +151,10 @@ Table columns:
 
 | Column | Behavior |
 | --- | --- |
-| `Dades de l'alumne` | Shows full student name, level, and contacts. Contact full name, phone, and email are editable. |
-| `Usuari iernestlluch` | Shows proposed editable institutional email and a `Comprova` availability button. |
-| `Usuari Dinantia` | Shows Dinantia ID and group autocomplete with selected group chips. |
-| `Generar` | Starts the external account creation flow. |
+| `Dades de l'alumne` | Shows full student name, level, optional comment, and contacts. Contact full name, phone, and email are editable. |
+| `Usuari iernestlluch` | Shows proposed editable institutional email, `Comprova` prefix search, and `Generar només correu`. |
+| `Usuari Dinantia` | Shows Dinantia ID, `Comprova`, group autocomplete with selected group chips, and `Generar només usuari dinantia`. |
+| `Generar` | Starts the full external account creation flow. Also contains `Arxivar`, which only sets `managed` to `TRUE`. |
 
 ## Data Loading Flow
 
@@ -161,7 +167,7 @@ When the page opens:
 5. Server groups contacts by student `id`.
 6. Server filters out rows where `managed` parses as `TRUE`.
 7. Server fetches all Dinantia groups with pagination.
-8. Browser renders rows and keeps the group list in memory for local autocomplete.
+8. Browser renders rows, including `comment` when present, and keeps the group list in memory for local autocomplete.
 
 Pending-row rule:
 
@@ -193,11 +199,23 @@ Email normalization for suggestions:
 - Lowercases.
 - Removes non-alphanumeric characters.
 
-The `Comprova` button calls `checkGoogleEmailAvailability(email)`, which:
+The `Comprova` button in `Usuari iernestlluch` uses `checkGoogleEmailPrefixMatches(prefix)` with a prefix built from `name + surname1`, without the day-of-month number. The browser displays:
+
+```text
+Correus trobats:
+email1@iernestlluch.cat
+email2@iernestlluch.cat
+```
+
+If no matching primary emails are found, it shows that no emails were found for that name and surname.
+
+The edited email textbox is still validated exactly when the user clicks `Generar` or `Generar només correu`.
+
+The `Comprova` button in `Usuari Dinantia` calls `checkDinantiaIdAvailability(id)`, which:
 
 1. Repeats access control.
-2. Requires `@iernestlluch.cat`.
-3. Calls `AdminDirectory.Users.get(email)`.
+2. Requires a non-empty student ID.
+3. Calls `GET /v1/accounts/view/{id}` through Dinantia.
 4. Returns available/not available.
 
 ## Editable Contacts
@@ -305,6 +323,73 @@ Server sequence:
 
 If any step fails, the function throws an error and the row remains visible for correction/retry. `managed` is only set after all previous steps succeed.
 
+## Partial And Archive Actions
+
+### `Generar només correu`
+
+The button in the `Usuari iernestlluch` column calls `createGoogleStudentAccountOnly(request)`.
+
+Request payload:
+
+```javascript
+{
+  rowNumber,
+  institutionalEmail,
+  contacts
+}
+```
+
+Server sequence:
+
+1. Check access.
+2. Normalize and validate institutional email.
+3. Load the source student row by row number.
+4. Reject if `managed` is already `TRUE`.
+5. Sanitize submitted editable contacts.
+6. Validate required student fields and contact data.
+7. Check Google Workspace email availability.
+8. Write corrected contact values back to `new_student_form_contacts`.
+9. Create the Google Workspace user.
+10. Return success without setting `managed` to `TRUE`.
+
+### `Generar només usuari dinantia`
+
+The button in the `Usuari Dinantia` column calls `createDinantiaStudentAccountOnly(request)`.
+
+Request payload:
+
+```javascript
+{
+  rowNumber,
+  institutionalEmail,
+  groupIds,
+  contacts
+}
+```
+
+Server sequence:
+
+1. Check access.
+2. Normalize and validate institutional email.
+3. Normalize selected Dinantia group IDs.
+4. Load the source student row by row number.
+5. Reject if `managed` is already `TRUE`.
+6. Sanitize submitted editable contacts.
+7. Normalize contact phones.
+8. Fetch current Dinantia groups.
+9. Validate required student fields and contact data.
+10. Check Dinantia account ID availability.
+11. Validate selected Dinantia group IDs against the fetched group list.
+12. Write corrected contact values back to `new_student_form_contacts`.
+13. Create the Dinantia student account.
+14. Return success without setting `managed` to `TRUE`.
+
+### `Arxivar`
+
+The button in the `Generar` column calls `archiveStudentRequest(request)`.
+
+It loads the source row and sets `new_student_form.managed` to `TRUE`. It does not create Google Workspace or Dinantia accounts, does not update contacts, and does not send notification email.
+
 ## Google Workspace User Creation
 
 The panel creates the student user with Admin Directory:
@@ -344,7 +429,7 @@ The integration uses the Dinantia API credentials from script properties and sen
 ```javascript
 {
   id: student.id,
-  name: fullStudentName,
+  name: dinantiaStudentName,
   email: institutionalEmail,
   gender: 'other',
   language: 'ca_ES',
@@ -364,6 +449,8 @@ The integration uses the Dinantia API credentials from script properties and sen
   fields: []
 }
 ```
+
+`dinantiaStudentName` is built as `surname1 surname2, name`. If `surname2` is empty, it is `surname1, name`.
 
 Parent gender mapping:
 
@@ -391,6 +478,7 @@ The email includes:
 - First surname
 - Second surname
 - Level
+- Comment, or `-`
 - Generated institutional email
 - Selected Dinantia group IDs and labels
 - Every contact full name, email, phone, and relation
@@ -418,6 +506,13 @@ Important stages:
 - `createStudentAccounts:notificationSent`
 - `createStudentAccounts:managedSet`
 - `createStudentAccounts:failed`
+- `createGoogleStudentAccountOnly:start`
+- `createGoogleStudentAccountOnly:success`
+- `createGoogleStudentAccountOnly:failed`
+- `createDinantiaStudentAccountOnly:start`
+- `createDinantiaStudentAccountOnly:success`
+- `createDinantiaStudentAccountOnly:failed`
+- `archiveStudentRequest:success`
 
 Browser behavior:
 
@@ -471,6 +566,8 @@ The current implementation is intentionally conservative:
 - If Dinantia creation fails, `managed` is not set to `TRUE`.
 - If notification email fails, `managed` is not set to `TRUE`.
 - If `managed` is not `TRUE`, the row remains visible for retry.
+- Partial creation actions do not set `managed` to `TRUE`.
+- `Arxivar` sets `managed` to `TRUE` immediately and hides the row without creating accounts.
 
 Known operational caveat:
 

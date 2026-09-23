@@ -47,11 +47,13 @@ function getPendingStudentRows_() {
         surname1: cleanText_(row[studentHeaderMap.surname1]),
         surname2: cleanText_(row[studentHeaderMap.surname2]),
         level: cleanText_(row[studentHeaderMap.level]),
+        comment: getStudentCommentFromRow_(row, studentHeaderMap),
         managed: row[studentHeaderMap.managed]
       };
 
       student.fullName = buildFullName_(student);
       student.suggestedEmail = generateSuggestedStudentEmail_(student);
+      student.emailSearchPrefix = generateStudentEmailSearchPrefix_(student);
       student.contacts = contactsByStudentId[student.id] || [];
       return student;
     })
@@ -194,6 +196,142 @@ function createStudentAccounts(request) {
   }
 }
 
+function createGoogleStudentAccountOnly(request) {
+  requireAdmin_();
+
+  let rowNumber = '';
+  let studentId = '';
+
+  try {
+    const payload = request || {};
+    rowNumber = Number(payload.rowNumber);
+    const institutionalEmail = normalizeInstitutionalEmail_(payload.institutionalEmail);
+
+    logPanelStep_('createGoogleStudentAccountOnly:start', {
+      rowNumber: rowNumber,
+      institutionalEmail: institutionalEmail,
+      submittedContacts: Array.isArray(payload.contacts) ? payload.contacts.length : 0
+    });
+
+    if (!rowNumber || rowNumber < 2) throw new Error('Fila no valida.');
+
+    const context = getStudentContextByRow_(rowNumber);
+    const student = context.student;
+    studentId = student.id;
+    const contacts = sanitizeEditableContacts_(payload.contacts, context.contacts, student.id);
+
+    validateBaseStudentAndContacts_(student, contacts);
+
+    if (googleUserExists_(institutionalEmail)) {
+      throw new Error('Ja existeix un usuari Google amb aquest correu.');
+    }
+
+    updateContactRows_(context.contactsSheet, contacts);
+    const googleUser = createGoogleStudentUser_(student, institutionalEmail, contacts);
+
+    logPanelStep_('createGoogleStudentAccountOnly:success', {
+      rowNumber: rowNumber,
+      studentId: student.id,
+      googleUserId: googleUser.id || '',
+      institutionalEmail: institutionalEmail
+    });
+
+    return {
+      ok: true,
+      message: 'Correu creat correctament.',
+      googleUserId: googleUser.id || '',
+      email: institutionalEmail,
+      studentId: student.id
+    };
+  } catch (error) {
+    logPanelError_('createGoogleStudentAccountOnly:failed', error, {
+      rowNumber: rowNumber,
+      studentId: studentId
+    });
+    throw error;
+  }
+}
+
+function createDinantiaStudentAccountOnly(request) {
+  requireAdmin_();
+
+  let rowNumber = '';
+  let studentId = '';
+
+  try {
+    const payload = request || {};
+    rowNumber = Number(payload.rowNumber);
+    const institutionalEmail = normalizeInstitutionalEmail_(payload.institutionalEmail);
+    const groupIds = normalizeSelectedGroupIds_(payload.groupIds);
+
+    logPanelStep_('createDinantiaStudentAccountOnly:start', {
+      rowNumber: rowNumber,
+      institutionalEmail: institutionalEmail,
+      groupIds: groupIds,
+      submittedContacts: Array.isArray(payload.contacts) ? payload.contacts.length : 0
+    });
+
+    if (!rowNumber || rowNumber < 2) throw new Error('Fila no valida.');
+    if (!groupIds.length) throw new Error('Cal seleccionar almenys un grup de Dinantia.');
+
+    const context = getStudentContextByRow_(rowNumber);
+    const student = context.student;
+    studentId = student.id;
+    const contacts = sanitizeEditableContacts_(payload.contacts, context.contacts, student.id);
+    const dinantiaGroups = dinantiaListGroups_();
+
+    validateBaseStudentAndContacts_(student, contacts);
+
+    if (dinantiaAccountExists_(student.id)) {
+      throw new Error('Ja existeix un usuari Dinantia amb aquest identificador.');
+    }
+
+    validateSelectedDinantiaGroups_(groupIds, dinantiaGroups);
+    updateContactRows_(context.contactsSheet, contacts);
+    createDinantiaStudent_(student, contacts, groupIds, institutionalEmail);
+
+    logPanelStep_('createDinantiaStudentAccountOnly:success', {
+      rowNumber: rowNumber,
+      studentId: student.id,
+      groupIds: groupIds
+    });
+
+    return {
+      ok: true,
+      message: 'Usuari Dinantia creat correctament.',
+      studentId: student.id
+    };
+  } catch (error) {
+    logPanelError_('createDinantiaStudentAccountOnly:failed', error, {
+      rowNumber: rowNumber,
+      studentId: studentId
+    });
+    throw error;
+  }
+}
+
+function archiveStudentRequest(request) {
+  requireAdmin_();
+
+  const payload = request || {};
+  const rowNumber = Number(payload.rowNumber);
+  if (!rowNumber || rowNumber < 2) throw new Error('Fila no valida.');
+
+  const context = getStudentContextByRow_(rowNumber);
+  setCellByHeader_(context.studentSheet, rowNumber, 'managed', true);
+
+  logPanelStep_('archiveStudentRequest:success', {
+    rowNumber: rowNumber,
+    studentId: context.student.id
+  });
+
+  return {
+    ok: true,
+    message: 'Sol licitud arxivada.',
+    studentId: context.student.id
+  };
+}
+
 function getStudentContextByRow_(rowNumber) {
   const dinantiaSpreadsheet = openLogicalTableSpreadsheet_(CONFIG_.dinantiaLogicalTable);
   const studentSheet = getRequiredSheet_(dinantiaSpreadsheet, CONFIG_.studentSheetName);
@@ -212,6 +350,7 @@ function getStudentContextByRow_(rowNumber) {
     surname1: cleanText_(row[studentHeaderMap.surname1]),
     surname2: cleanText_(row[studentHeaderMap.surname2]),
     level: cleanText_(row[studentHeaderMap.level]),
+    comment: getStudentCommentFromRow_(row, studentHeaderMap),
     managed: row[studentHeaderMap.managed]
   };
   student.fullName = buildFullName_(student);
@@ -229,10 +368,7 @@ function getStudentContextByRow_(rowNumber) {
 }
 
 function validateStudentForCreation_(student, contacts, institutionalEmail, groupIds, dinantiaGroups) {
-  requireField_(student.id, 'Identificador');
-  requireField_(student.name, 'Nom');
-  requireField_(student.surname1, 'Cognom 1');
-  requireField_(student.level, 'Nivell');
+  validateBaseStudentAndContacts_(student, contacts);
 
   if (googleUserExists_(institutionalEmail)) {
     throw new Error('Ja existeix un usuari Google amb aquest correu.');
@@ -242,16 +378,14 @@ function validateStudentForCreation_(student, contacts, institutionalEmail, grou
     throw new Error('Ja existeix un usuari Dinantia amb aquest identificador.');
   }
 
-  const availableGroupIds = dinantiaGroups.map(function(group) {
-    return group.id;
-  });
-  const missingGroups = groupIds.filter(function(groupId) {
-    return availableGroupIds.indexOf(groupId) === -1;
-  });
+  validateSelectedDinantiaGroups_(groupIds, dinantiaGroups);
+}
 
-  if (missingGroups.length) {
-    throw new Error('Hi ha grups Dinantia no valids: ' + missingGroups.join(', '));
-  }
+function validateBaseStudentAndContacts_(student, contacts) {
+  requireField_(student.id, 'Identificador');
+  requireField_(student.name, 'Nom');
+  requireField_(student.surname1, 'Cognom 1');
+  requireField_(student.level, 'Nivell');
 
   contacts.forEach(function(contact, index) {
     requireField_(contact.fullName, 'Nom complet familiar ' + (index + 1));
@@ -263,6 +397,19 @@ function validateStudentForCreation_(student, contacts, institutionalEmail, grou
       throw new Error('El correu del familiar ' + (index + 1) + ' no es valid.');
     }
   });
+}
+
+function validateSelectedDinantiaGroups_(groupIds, dinantiaGroups) {
+  const availableGroupIds = dinantiaGroups.map(function(group) {
+    return group.id;
+  });
+  const missingGroups = groupIds.filter(function(groupId) {
+    return availableGroupIds.indexOf(groupId) === -1;
+  });
+
+  if (missingGroups.length) {
+    throw new Error('Hi ha grups Dinantia no valids: ' + missingGroups.join(', '));
+  }
 }
 
 function normalizeSelectedGroupIds_(groupIds) {
@@ -280,6 +427,12 @@ function normalizeSelectedGroupIds_(groupIds) {
 
 function buildFullName_(student) {
   return [student.name, student.surname1, student.surname2].filter(Boolean).join(' ');
+}
+
+function getStudentCommentFromRow_(row, headerMap) {
+  if (headerMap.comment !== undefined) return cleanText_(row[headerMap.comment]);
+  if (headerMap.comments !== undefined) return cleanText_(row[headerMap.comments]);
+  return '';
 }
 
 function requireField_(value, label) {
@@ -423,6 +576,7 @@ function buildStudentCreatedNotificationBody_(student, contacts, institutionalEm
     'Cognom 1: ' + student.surname1,
     'Cognom 2: ' + (student.surname2 || '-'),
     'Nivell: ' + student.level,
+    'Comentaris: ' + (student.comment || '-'),
     '',
     'Usuari iernestlluch:',
     'Correu: ' + institutionalEmail,

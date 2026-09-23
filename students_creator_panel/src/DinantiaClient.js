@@ -126,6 +126,20 @@ function dinantiaAccountExists_(id) {
   }
 }
 
+function checkDinantiaIdAvailability(id) {
+  requireAdmin_();
+
+  const normalizedId = cleanText_(id);
+  if (!normalizedId) {
+    throw new Error('Cal informar un ID Dinantia.');
+  }
+
+  return {
+    id: normalizedId,
+    available: !dinantiaAccountExists_(normalizedId)
+  };
+}
+
 function dinantiaEmailExists_(email) {
   const body = dinantiaFetch_('/v1/accounts/index?email=' + encodeURIComponent(email) + '&limit=5');
   return Array.isArray(body.data) && body.data.length > 0;
@@ -138,7 +152,7 @@ function createDinantiaStudent_(student, contacts, groupIds, institutionalEmail)
 
   const payload = {
     id: student.id,
-    name: buildFullName_(student),
+    name: buildDinantiaStudentName_(student),
     email: institutionalEmail,
     gender: 'other',
     language: 'ca_ES',
@@ -171,6 +185,11 @@ function createDinantiaStudent_(student, contacts, groupIds, institutionalEmail)
     method: 'post',
     payload: payload
   });
+}
+
+function buildDinantiaStudentName_(student) {
+  const surnames = [student.surname1, student.surname2].filter(Boolean).join(' ');
+  return [surnames, student.name].filter(Boolean).join(', ');
 }
 
 function getDinantiaParentGender_(relation) {

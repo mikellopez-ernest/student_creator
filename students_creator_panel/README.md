@@ -18,7 +18,7 @@ The web app reads pending rows from:
 | `Dinantia -> new_student_form_contacts` | Relative/contact rows linked by student `id`. |
 | `Dinantia -> new_student_config` | Routing config by course: `courses`, `email_coord`, `email_digi`. |
 
-Rows are shown while `managed` is not `TRUE`. After the full creation process succeeds, the panel writes `TRUE` to `managed`.
+Rows are shown while `managed` is not `TRUE`. After the full creation process succeeds, or when the user clicks `Arxivar`, the panel writes `TRUE` to `managed`.
 
 ## Behavior
 
@@ -26,10 +26,10 @@ The panel shows:
 
 | Column | Behavior |
 | --- | --- |
-| `Dades de l'alumne` | Full name, level, and every saved relative/contact. |
-| `Usuari iernestlluch` | Proposed editable `@iernestlluch.cat` email and availability check. |
-| `Usuari Dinantia` | Dinantia group autocomplete using groups fetched when the page loads. |
-| `Generar` | Creates the Google Workspace user and the Dinantia user, then marks the source row as managed. |
+| `Dades de l'alumne` | Full name, level, comment, and every saved relative/contact. |
+| `Usuari iernestlluch` | Proposed editable `@iernestlluch.cat` email, prefix match search by `nom+cognom1`, and `Generar només correu`. |
+| `Usuari Dinantia` | Dinantia ID availability check, group autocomplete using groups fetched when the page loads, and `Generar només usuari dinantia`. |
+| `Generar` | Creates both users and marks the source row as managed. Also includes `Arxivar`, which only sets `managed` to `TRUE`. |
 
 Google Workspace users are created in `/Alumnes` with the initial password `institut` and `changePasswordAtNextLogin: true`.
 
@@ -41,7 +41,7 @@ After the Google Workspace user and Dinantia user are created, the panel sends a
 
 The summary email includes the generated institutional address and the initial password `institut`.
 
-Only after that email is sent does the panel mark `managed` as `TRUE`.
+Only after that email is sent does the full `Generar` flow mark `managed` as `TRUE`. The partial buttons do not mark the row as managed; use `Arxivar` when the row should disappear after manual or partial handling.
 
 Contact phone numbers are normalized and validated again before Dinantia creation, so older pending rows still send valid `+34` format to the API.
 
@@ -67,7 +67,8 @@ The web app is domain-restricted and also checks `access_granted` on the server.
 - Direct institutional emails.
 - Càrrecs from `Càrrega lectiva -> carrecs`, resolved through `Càrrega lectiva -> professors`.
 
-Protected server entry points are `doGet()`, `getPanelData()`, `checkGoogleEmailAvailability(email)`, and `createStudentAccounts(request)`.
+Protected server entry points are `doGet()`, `getPanelData()`, `checkGoogleEmailAvailability(email)`, `checkGoogleEmailPrefixMatches(prefix)`, `checkDinantiaIdAvailability(id)`, and `createStudentAccounts(request)`.
+The partial and archive actions are also protected: `createGoogleStudentAccountOnly(request)`, `createDinantiaStudentAccountOnly(request)`, and `archiveStudentRequest(request)`.
 
 If access is denied while opening the panel, the user sees an `Acces no autoritzat` page. If access is denied during a browser action, the server method returns an error to the panel.
 
