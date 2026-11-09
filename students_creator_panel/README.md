@@ -17,6 +17,7 @@ The web app reads pending rows from:
 | `Dinantia -> new_student_form` | Student rows. Uses `managed` to hide completed rows. |
 | `Dinantia -> new_student_form_contacts` | Relative/contact rows linked by student `id`. |
 | `Dinantia -> new_student_config` | Routing config by course: `courses`, `email_coord`, `email_digi`. |
+| `Dades alumnes -> course sheet` | Permanent student registry row created after Dinantia succeeds. |
 
 Rows are shown while `managed` is not `TRUE`. After the full creation process succeeds, or when the user clicks `Arxivar`, the panel writes `TRUE` to `managed`.
 
@@ -29,19 +30,21 @@ The panel shows:
 | `Dades de l'alumne` | Full name, level, comment, and every saved relative/contact. |
 | `Usuari iernestlluch` | Proposed editable `@iernestlluch.cat` email, prefix match search by `nom+cognom1`, and `Generar només correu`. |
 | `Usuari Dinantia` | Dinantia ID availability check, group autocomplete using groups fetched when the page loads, and `Generar només usuari dinantia`. |
-| `Generar` | Creates both users and marks the source row as managed. Also includes `Arxivar`, which only sets `managed` to `TRUE`. |
+| `Generar` | Creates both users, creates the `Dades alumnes 2026-2027` row, sends the notification, and marks the source row as managed. Also includes `Arxivar`, which only sets `managed` to `TRUE`. |
 
 Google Workspace users are created in `/Alumnes` with the initial password `institut` and `changePasswordAtNextLogin: true`.
 
-After the Google Workspace user and Dinantia user are created, the panel sends a summary email to:
+After the Google Workspace user, Dinantia user, and student-registry row are created, the panel sends a summary email to:
 
 - `equip_directiu@iernestlluch.cat`
 - The selected course's `email_coord`
 - The selected course's `email_digi`
 
-The summary email includes the generated institutional address and the initial password `institut`.
+The summary email includes the generated institutional address, the initial password `institut`, and the destination sheet, row, and class in `Dades alumnes 2026-2027`.
 
-Only after that email is sent does the full `Generar` flow mark `managed` as `TRUE`. The partial buttons do not mark the row as managed; use `Arxivar` when the row should disappear after manual or partial handling.
+Only after that email is sent does the full `Generar` flow mark `managed` as `TRUE`. `Generar només usuari Dinantia` also creates the registry row, but does not mark the request as managed. `Generar només correu` does not create a registry row. Use `Arxivar` when the row should disappear after manual or partial handling.
+
+The registry integration supports `1r ESO`, `2n ESO`, `3r ESO`, `4t ESO`, `1r/2n BAT`, `1r/2n SMX`, `1r/2n PCC`, `PFI`, and `1r/2n AC`. The selected Dinantia groups must contain exactly one compatible class group. Duplicate student IDs are rejected across every supported destination sheet.
 
 Contact phone numbers are normalized and validated again before Dinantia creation, so older pending rows still send valid `+34` format to the API.
 
@@ -54,6 +57,8 @@ The `Generar` flow writes structured logs to Apps Script executions with stages 
 - `createStudentAccounts:validated`
 - `createStudentAccounts:googleUserCreated`
 - `createStudentAccounts:dinantiaUserCreated`
+- `createStudentAccounts:studentRegistryPrepared`
+- `createStudentAccounts:studentRegistryCreated`
 - `createStudentAccounts:notificationSent`
 - `createStudentAccounts:managedSet`
 - `createStudentAccounts:failed`
@@ -88,6 +93,8 @@ Optional:
 | Property | Meaning |
 | --- | --- |
 | `dinantia_api_base_url` | Dinantia API base URL. Defaults to `https://app.dinantia.com/api/web`. |
+
+The shared `db -> tables` registry must also contain the logical table `Dades alumnes`, pointing to `Dades alumnes 2026-2027`.
 
 ## Deployment
 
@@ -124,6 +131,7 @@ npm run open
 - `docs/SPEC.md`
 - `docs/DEPLOYMENT.md`
 - `docs/DINANTIA_STUDENT_CREATION.md`
+- `docs/STUDENT_REGISTRY_CREATION.md`
 - `../docs/ACCESS_CONTROL.md`
 - `../docs/SHARED_SPREADSHEET_DATABASE.md`
 - `../docs/DINANTIA_API_NOTES.md`

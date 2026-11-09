@@ -2,14 +2,80 @@ function getDinantiaConfig_() {
   const properties = PropertiesService.getScriptProperties();
   const user = String(properties.getProperty('dinantia_api_user') || '').trim();
   const secret = String(properties.getProperty('dinantia_api_secret') || '').trim();
+  const baseUrl = String(properties.getProperty('dinantia_api_base_url') || '').trim() ||
+    'https://app.dinantia.com/api/web';
 
   if (!user) throw new Error('Missing script property "dinantia_api_user".');
   if (!secret) throw new Error('Missing script property "dinantia_api_secret".');
 
   return {
     user: user,
-    secret: secret
+    secret: secret,
+    baseUrl: baseUrl.replace(/\/$/, '')
   };
+}
+
+function dinantiaFetch_(path, options) {
+  const config = getDinantiaConfig_();
+  const requestOptions = options || {};
+  const method = requestOptions.method || 'get';
+  const response = UrlFetchApp.fetch(config.baseUrl + path, {
+    method: method,
+    headers: buildDinantiaHeaders_(),
+    payload: requestOptions.payload ? JSON.stringify(requestOptions.payload) : undefined,
+    contentType: 'application/vnd.api+json',
+    muteHttpExceptions: true
+  });
+  const status = response.getResponseCode();
+  const text = response.getContentText();
+  const body = parseDinantiaResponse_(text, status);
+
+  console.log(JSON.stringify({
+    event: 'dinantiaFetch',
+    method: method,
+    path: path,
+    status: status,
+    success: body.success
+  }));
+
+  if (status < 200 || status >= 300 || body.success === false) {
+    throw new Error('Dinantia API error ' + status + ': ' + formatDinantiaError_(body, text));
+  }
+
+  return body;
+}
+
+function parseDinantiaResponse_(text, status) {
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error('Dinantia API error ' + status + ': resposta no JSON.');
+  }
+}
+
+function formatDinantiaError_(body, fallbackText) {
+  if (body && Array.isArray(body.errors) && body.errors.length) {
+    return body.errors.map(function(error) {
+      return [
+        error.field || error.code || 'Dinantia',
+        error.message || error.detail || 'error'
+      ].join(': ');
+    }).join('; ');
+  }
+
+  return body && (body.message || body.error) || fallbackText || 'error desconegut';
+}
+
+function getDinantiaAccount_(studentId) {
+  return dinantiaFetch_('/v1/accounts/view/' + encodeURIComponent(studentId));
+}
+
+function deleteDinantiaAccount_(studentId) {
+  return dinantiaFetch_('/v1/accounts/delete/' + encodeURIComponent(studentId), {
+    method: 'delete'
+  });
 }
 
 function buildDinantiaHeaders_() {

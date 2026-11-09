@@ -1,6 +1,6 @@
 # secretaria_form
 
-Google Apps Script project managed with clasp.
+Internal Google Apps Script student-management web app managed with clasp.
 
 | Field | Value |
 | --- | --- |
@@ -40,6 +40,7 @@ This Apps Script project already has the required properties configured:
 | `access_granted` | Comma-separated allowed direct emails and/or càrrecs from `Càrrega lectiva -> carrecs` |
 | `dinantia_api_user` | Dinantia API user |
 | `dinantia_api_secret` | Dinantia API secret |
+| `dinantia_api_base_url` | Optional API base URL; defaults to `https://app.dinantia.com/api/web` |
 
 Do not commit, log, or display secret values.
 
@@ -72,7 +73,12 @@ Current web app deployment:
 | Deployment ID | `AKfycbzN13M7Lx3PE6QJWszTFWXRYxtjV6wKjSXoso6Qiiy81ie6oWELXjoEeBkN9UxRIoKcZg` |
 | URL | `https://script.google.com/a/macros/iernestlluch.cat/s/AKfycbzN13M7Lx3PE6QJWszTFWXRYxtjV6wKjSXoso6Qiiy81ie6oWELXjoEeBkN9UxRIoKcZg/exec` |
 
-The web app stores submissions in:
+The root URL presents two operations:
+
+- `Crear alumne nou` opens the existing new-student request form.
+- `Baixa d'alumne` selects a cached Dinantia student, deletes the Dinantia account, and marks the permanent student row as withdrawn.
+
+The new-student form stores submissions in:
 
 | Logical table notation | Data |
 | --- | --- |
@@ -92,11 +98,28 @@ Relative phone numbers are normalized before saving:
 
 Phone cells are written as plain text so Google Sheets keeps the leading `+`.
 
+The withdrawal workflow uses:
+
+| Logical table notation | Data |
+| --- | --- |
+| `Dinantia -> students_cache` | Available groups and students, including `student_id`, `student_name`, `student_email`, `group_name`, and `student_data_sheet` |
+| `Dinantia -> new_student_config` | Course-specific `email_coord` and `email_digi` notification recipients |
+| `Dades alumnes` | Permanent student rows; column K is marked `TRUE` and column M receives the withdrawal date |
+
+Before deleting from Dinantia, the server confirms that the cache selection is still valid, the student ID occurs exactly once in the supported `Dades alumnes` sheets, the cache sheet name matches that row, the notification configuration is complete, and the Dinantia account exists. After the Dinantia and permanent-row updates are verified, every `students_cache` row with that `student_id` is deleted, including rows for other groups. The Google Workspace account is not modified.
+
+Completed withdrawal notifications go to:
+
+- `equip_directiu@iernestlluch.cat`
+- The course's `email_coord`
+- The course's `email_digi`
+- `secretaria@iernestlluch.cat`
+
 ## Access Control
 
 The web app is domain-restricted and also checks `access_granted` on the server. That property can contain direct institutional emails and/or càrrecs from `Càrrega lectiva -> carrecs`; càrrecs are resolved through `Càrrega lectiva -> professors` to institutional emails.
 
-Both `doGet()` and `submitNewStudentForm(payload)` enforce the same check.
+All browser-callable methods enforce the same check, including the landing page, new-student submission, withdrawal dropdown loaders, and final withdrawal action.
 
 If access is denied while opening the app, the user sees an `Acces no autoritzat` page. If access is denied during submission, the server method returns an error to the form.
 
@@ -110,3 +133,4 @@ If access is denied while opening the app, the user sees an `Acces no autoritzat
 
 - `docs/SPEC.md`
 - `docs/DEPLOYMENT.md`
+- `docs/STUDENT_WITHDRAWAL.md`

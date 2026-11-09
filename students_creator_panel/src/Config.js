@@ -5,6 +5,7 @@ const CONFIG_ = {
   studentEmailDomain: 'iernestlluch.cat',
   initialStudentPassword: 'institut',
   dinantiaLogicalTable: 'Dinantia',
+  studentRegistryLogicalTable: 'Dades alumnes',
   studentSheetName: 'new_student_form',
   contactsSheetName: 'new_student_form_contacts',
   configSheetName: 'new_student_config',

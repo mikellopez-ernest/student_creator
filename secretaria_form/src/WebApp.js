@@ -3,19 +3,44 @@ const NEW_STUDENT_SHEET_NAME_ = 'new_student_form';
 const NEW_STUDENT_CONTACTS_SHEET_NAME_ = 'new_student_form_contacts';
 const NEW_STUDENT_CONFIG_SHEET_NAME_ = 'new_student_config';
 const DIRECTIVE_TEAM_EMAIL_ = 'equip_directiu@iernestlluch.cat';
+const SECRETARIA_EMAIL_ = 'secretaria@iernestlluch.cat';
 
-function doGet() {
+function doGet(event) {
   const access = getAccessDecision_();
   if (!access.allowed) return createAccessDeniedOutput_(access);
 
-  const template = HtmlService.createTemplateFromFile('NewStudentForm');
-  template.courses = getNewStudentConfig_().map(function(config) {
-    return config.course;
-  });
+  const view = cleanText_(event && event.parameter && event.parameter.view).toLowerCase();
+  const appUrl = ScriptApp.getService().getUrl();
 
-  return template
+  if (view === 'new-student') {
+    const newStudentTemplate = HtmlService.createTemplateFromFile('NewStudentForm');
+    newStudentTemplate.appUrl = appUrl;
+    newStudentTemplate.courses = getNewStudentConfig_().map(function(config) {
+      return config.course;
+    });
+
+    return newStudentTemplate
+      .evaluate()
+      .setTitle('Creacio alumne nou')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  if (view === 'withdrawal') {
+    const withdrawalTemplate = HtmlService.createTemplateFromFile('WithdrawalPage');
+    withdrawalTemplate.appUrl = appUrl;
+
+    return withdrawalTemplate
+      .evaluate()
+      .setTitle('Baixa d alumne')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  const landingTemplate = HtmlService.createTemplateFromFile('LandingPage');
+  landingTemplate.appUrl = appUrl;
+
+  return landingTemplate
     .evaluate()
-    .setTitle('Creacio alumne nou')
+    .setTitle('Gestio d alumnes')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 

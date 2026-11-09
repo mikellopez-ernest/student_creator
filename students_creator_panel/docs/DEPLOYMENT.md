@@ -58,4 +58,11 @@ Run `grantRequiredPermissions()` manually if Apps Script asks the deploying user
 
 Because the panel creates Google Workspace users and calls Dinantia, the deploying user must have the needed Admin Directory permissions and Dinantia API credentials in script properties.
 
+The spreadsheet registry referenced by `db` must include these logical tables:
+
+- `Dinantia`, for form, contacts, configuration, and cache data.
+- `Dades alumnes`, pointing to the live `Dades alumnes 2026-2027` spreadsheet.
+
+The deploying user needs edit access to every supported destination sheet in `Dades alumnes 2026-2027`.
+
 Keep `.clasp.json` local and uncommitted.

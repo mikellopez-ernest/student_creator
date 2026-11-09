@@ -45,6 +45,16 @@
         letter-spacing: 0;
       }
 
+      .back-link {
+        display: inline-block;
+        margin-bottom: 16px;
+        color: var(--primary-dark);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .back-link:hover { text-decoration: underline; }
+
       form {
         display: grid;
         gap: 18px;
@@ -220,6 +230,7 @@
   </head>
   <body>
     <main>
+      <a class="back-link" href="<?= appUrl ?>">← Tornar</a>
       <h1>Creació d'alumne nou.</h1>
 
       <form id="student-form">

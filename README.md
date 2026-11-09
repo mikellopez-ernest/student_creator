@@ -8,8 +8,8 @@ Each Apps Script project lives in its own folder, with its own source files, cla
 
 | Folder | Apps Script project | Purpose |
 | --- | --- | --- |
-| `secretaria_form/` | `secretaria_form` | Internal form for submitting new-student creation requests into the shared database. |
-| `students_creator_panel/` | `students_creator_panel` | Protected panel for processing pending rows, creating Google Workspace users, creating Dinantia students, and marking rows as managed. |
+| `secretaria_form/` | `secretaria_form` | Internal student-management app for submitting new-student requests and processing student withdrawals. |
+| `students_creator_panel/` | `students_creator_panel` | Protected panel for creating Google Workspace users, Dinantia students, and their rows in `Dades alumnes 2026-2027`. |
 
 ## Stable Web Apps
 

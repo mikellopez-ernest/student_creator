@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ca">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f6f7f9;
+        --surface: #ffffff;
+        --text: #1d2630;
+        --muted: #5f6b7a;
+        --border: #d8dee6;
+        --primary: #126a72;
+        --primary-dark: #0b5057;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      main { width: min(760px, 100%); }
+      h1 { margin: 0 0 8px; font-size: 32px; }
+      .intro { margin: 0 0 24px; color: var(--muted); }
+
+      .options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .option {
+        display: grid;
+        gap: 10px;
+        min-height: 180px;
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--text);
+        text-decoration: none;
+        box-shadow: 0 10px 24px rgba(29, 38, 48, 0.06);
+        transition: border-color 0.15s ease, transform 0.15s ease;
+      }
+
+      .option:hover,
+      .option:focus-visible {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        outline: none;
+      }
+
+      .option-title { font-size: 22px; font-weight: 700; }
+      .option-copy { color: var(--muted); }
+      .option-action { align-self: end; color: var(--primary-dark); font-weight: 700; }
+
+      @media (max-width: 640px) {
+        .options { grid-template-columns: 1fr; }
+        h1 { font-size: 27px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Gestió d'alumnes</h1>
+      <p class="intro">Selecciona l'operació que vols realitzar.</p>
+
+      <div class="options">
+        <a class="option" href="<?= appUrl ?>?view=new-student">
+          <span class="option-title">Crear alumne nou</span>
+          <span class="option-copy">Envia les dades d'una nova incorporació.</span>
+          <span class="option-action">Obrir formulari</span>
+        </a>
+
+        <a class="option" href="<?= appUrl ?>?view=withdrawal">
+          <span class="option-title">Baixa d'alumne</span>
+          <span class="option-copy">Elimina l'alumne de Dinantia i registra la baixa.</span>
+          <span class="option-action">Iniciar baixa</span>
+        </a>
+      </div>
+    </main>
+  </body>
+</html>

@@ -51,9 +51,26 @@ Before deploying or testing, confirm these script properties exist:
 | --- | --- |
 | `db` | Resolves the registry spreadsheet and the `Càrrega lectiva` table used for role lookups. |
 | `access_granted` | Comma-separated direct emails and/or càrrecs allowed to use the form. |
+| `dinantia_api_user` | Dinantia API username used for withdrawal account lookup and deletion. |
+| `dinantia_api_secret` | Dinantia API secret. |
+| `dinantia_api_base_url` | Optional override; defaults to `https://app.dinantia.com/api/web`. |
 
 If `access_granted` is missing or empty, the deployed app shows `Acces no autoritzat`.
 
-Run `grantRequiredPermissions()` manually if Apps Script asks the deploying user to authorize access to `Càrrega lectiva`.
+The manifest requires `script.external_request` in addition to the existing spreadsheet, email, container UI, and active-user scopes. After adding this scope, the deploying user must authorize the new version before domain users can process withdrawals.
+
+Run `grantRequiredPermissions()` manually if Apps Script asks the deploying user to authorize access to `Càrrega lectiva`. Authorize the external-request scope from the Apps Script editor or deployment flow as the deploying account.
+
+## Post-Deployment Checks
+
+Use the stable `/exec` URL and verify without completing a real withdrawal:
+
+1. The root page shows `Crear alumne nou` and `Baixa d'alumne`.
+2. `Crear alumne nou` opens the existing form and its `Tornar` link returns to the root.
+3. `Baixa d'alumne` loads the group dropdown from `Dinantia -> students_cache`.
+4. Selecting a group loads students and selecting a student opens the `Sí` / `No` confirmation modal, including the Dinantia, permanent-row, cache-deletion, and notification actions.
+5. Choose `No` during smoke testing so no external account or spreadsheet row is changed.
+
+Before the first production withdrawal, confirm that the logical table `Dades alumnes` is registered and that every supported sheet retains the documented A:M headers.
 
 Keep `.clasp.json` local and uncommitted.

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ca">
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f6f7f9;
+        --surface: #ffffff;
+        --text: #1d2630;
+        --muted: #5f6b7a;
+        --border: #d8dee6;
+        --primary: #126a72;
+        --primary-dark: #0b5057;
+        --danger: #b42318;
+        --success: #14743f;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--background);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 16px;
+        line-height: 1.45;
+      }
+
+      main {
+        width: min(680px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 32px 0;
+      }
+
+      h1 { margin: 0 0 24px; font-size: 32px; }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 16px;
+        color: var(--primary-dark);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .back-link:hover { text-decoration: underline; }
+
+      .panel {
+        display: grid;
+        gap: 18px;
+        padding: 22px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+
+      label { display: grid; gap: 7px; font-weight: 700; }
+
+      select {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        color: var(--text);
+        background: #ffffff;
+        font: inherit;
+      }
+
+      select:focus {
+        outline: 3px solid rgba(18, 106, 114, 0.18);
+        border-color: var(--primary);
+      }
+
+      select:disabled { cursor: wait; opacity: 0.65; }
+
+      .message {
+        min-height: 24px;
+        margin: 0;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .message.error { color: var(--danger); }
+      .message.success { color: var(--success); }
+
+      dialog {
+        width: min(520px, calc(100% - 32px));
+        border: 0;
+        border-radius: 10px;
+        padding: 0;
+        color: var(--text);
+        box-shadow: 0 24px 70px rgba(29, 38, 48, 0.28);
+      }
+
+      dialog::backdrop { background: rgba(29, 38, 48, 0.55); }
+      .dialog-content { padding: 24px; }
+      .dialog-content h2 { margin: 0 0 14px; font-size: 22px; }
+      .dialog-content p { margin: 0 0 12px; }
+      .dialog-content ul { margin: 0 0 18px; padding-left: 22px; }
+      .dialog-content li + li { margin-top: 6px; }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      button {
+        min-height: 42px;
+        border: 0;
+        border-radius: 6px;
+        padding: 0 18px;
+        background: var(--primary);
+        color: #ffffff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:hover { background: var(--primary-dark); }
+      button:disabled { cursor: wait; opacity: 0.65; }
+      .secondary { background: #e8edf2; color: var(--text); }
+      .secondary:hover { background: #d8e0e8; }
+      .danger { background: var(--danger); }
+      .danger:hover { background: #8f1c13; }
+
+      @media (max-width: 640px) {
+        main { width: min(100% - 24px, 680px); padding: 24px 0; }
+        h1 { font-size: 27px; }
+        .dialog-actions { flex-direction: column-reverse; }
+        .dialog-actions button { width: 100%; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="back-link" href="<?= appUrl ?>">← Tornar</a>
+      <h1>Baixa d'alumne</h1>
+
+      <section class="panel" aria-labelledby="withdrawal-title">
+        <label>
+          <span>Selecciona el grup</span>
+          <select id="group-select" disabled>
+            <option value="">Carregant grups...</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Alumnes</span>
+          <select id="student-select" disabled>
+            <option value="">Selecciona primer un grup</option>
+          </select>
+        </label>
+
+        <p class="message" id="message" role="status">Carregant grups...</p>
+      </section>
+    </main>
+
+    <dialog id="confirmation-dialog" aria-labelledby="confirmation-title">
+      <div class="dialog-content">
+        <h2 id="confirmation-title">Confirmació de la baixa</h2>
+        <p>Aquesta operació realitzarà els passos següents:</p>
+        <ul>
+          <li>Eliminarà l'alumne de Dinantia.</li>
+          <li>Marcarà l'alumne com a "baixa" a Dades alumnes.</li>
+          <li>Eliminarà l'alumne de la memòria cau.</li>
+          <li>Notificarà la baixa.</li>
+        </ul>
+        <p><strong>Segur que vol continuar?</strong></p>
+        <div class="dialog-actions">
+          <button class="secondary" type="button" id="cancel-button">No</button>
+          <button class="danger" type="button" id="confirm-button">Sí</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script>
+      const groupSelect = document.getElementById('group-select');
+      const studentSelect = document.getElementById('student-select');
+      const message = document.getElementById('message');
+      const dialog = document.getElementById('confirmation-dialog');
+      const cancelButton = document.getElementById('cancel-button');
+      const confirmButton = document.getElementById('confirm-button');
+
+      let selectedStudent = null;
+
+      groupSelect.addEventListener('change', loadStudents);
+      studentSelect.addEventListener('change', requestConfirmation);
+      cancelButton.addEventListener('click', cancelWithdrawal);
+      confirmButton.addEventListener('click', confirmWithdrawal);
+
+      loadGroups();
+
+      function loadGroups() {
+        setMessage('Carregant grups...', '');
+        google.script.run
+          .withSuccessHandler(function(groups) {
+            replaceOptions(groupSelect, 'Selecciona un grup', groups.map(function(group) {
+              return { value: group, label: group };
+            }));
+            groupSelect.disabled = false;
+            setMessage(groups.length ? '' : 'No hi ha grups disponibles.', '');
+          })
+          .withFailureHandler(handleFailure)
+          .getWithdrawalGroups();
+      }
+
+      function loadStudents() {
+        selectedStudent = null;
+        replaceOptions(studentSelect, 'Carregant alumnes...', []);
+        studentSelect.disabled = true;
+
+        if (!groupSelect.value) {
+          replaceOptions(studentSelect, 'Selecciona primer un grup', []);
+          setMessage('', '');
+          return;
+        }
+
+        setMessage('Carregant alumnes...', '');
+        google.script.run
+          .withSuccessHandler(function(students) {
+            replaceOptions(studentSelect, 'Selecciona un alumne', students.map(function(student) {
+              return {
+                value: student.studentId,
+                label: student.studentName + ' (' + student.studentId + ')',
+                student: student
+              };
+            }));
+            studentSelect.disabled = false;
+            studentSelect._students = students;
+            setMessage(students.length ? '' : 'No hi ha alumnes en aquest grup.', '');
+          })
+          .withFailureHandler(handleFailure)
+          .getWithdrawalStudents(groupSelect.value);
+      }
+
+      function requestConfirmation() {
+        if (!studentSelect.value) return;
+        selectedStudent = (studentSelect._students || []).find(function(student) {
+          return student.studentId === studentSelect.value;
+        }) || null;
+
+        if (!selectedStudent) {
+          setMessage('No s ha pogut identificar l alumne seleccionat.', 'error');
+          return;
+        }
+
+        dialog.showModal();
+      }
+
+      function cancelWithdrawal() {
+        dialog.close();
+        studentSelect.value = '';
+        selectedStudent = null;
+      }
+
+      function confirmWithdrawal() {
+        if (!selectedStudent) return;
+
+        setBusy(true);
+        dialog.close();
+        setMessage('Tramitant la baixa...', '');
+
+        google.script.run
+          .withSuccessHandler(function(response) {
+            setBusy(false);
+            const completedOption = Array.from(studentSelect.options).find(function(option) {
+              return option.value === response.studentId;
+            });
+            if (completedOption) completedOption.remove();
+            studentSelect.value = '';
+            selectedStudent = null;
+            setMessage(response.message, 'success');
+          })
+          .withFailureHandler(function(error) {
+            handleFailure(error);
+            setBusy(false);
+            studentSelect.value = '';
+            selectedStudent = null;
+          })
+          .withdrawStudent({
+            groupName: groupSelect.value,
+            studentId: selectedStudent.studentId
+          });
+      }
+
+      function replaceOptions(select, placeholder, options) {
+        select.innerHTML = '';
+        const firstOption = document.createElement('option');
+        firstOption.value = '';
+        firstOption.textContent = placeholder;
+        select.appendChild(firstOption);
+
+        options.forEach(function(optionData) {
+          const option = document.createElement('option');
+          option.value = optionData.value;
+          option.textContent = optionData.label;
+          select.appendChild(option);
+        });
+      }
+
+      function setBusy(isBusy) {
+        groupSelect.disabled = isBusy;
+        studentSelect.disabled = isBusy;
+        cancelButton.disabled = isBusy;
+        confirmButton.disabled = isBusy;
+        confirmButton.textContent = isBusy ? 'Tramitant...' : 'Sí';
+      }
+
+      function handleFailure(error) {
+        groupSelect.disabled = false;
+        if (groupSelect.value) studentSelect.disabled = false;
+        setMessage(error && error.message ? error.message : 'No s ha pogut completar l operacio.', 'error');
+      }
+
+      function setMessage(text, type) {
+        message.textContent = text;
+        message.className = 'message' + (type ? ' ' + type : '');
+      }
+
+    </script>
+  </body>
+</html>

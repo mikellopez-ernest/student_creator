@@ -148,6 +148,20 @@ function createStudentAccounts(request) {
       studentId: student.id
     });
 
+    const studentRegistryPlan = prepareStudentRegistryCreation_(
+      student,
+      contacts,
+      institutionalEmail,
+      groupIds,
+      dinantiaGroups
+    );
+    logPanelStep_('createStudentAccounts:studentRegistryPrepared', {
+      rowNumber: rowNumber,
+      studentId: student.id,
+      sheetName: studentRegistryPlan.sheetName,
+      className: studentRegistryPlan.className
+    });
+
     updateContactRows_(context.contactsSheet, contacts);
     logPanelStep_('createStudentAccounts:contactsUpdated', {
       rowNumber: rowNumber,
@@ -168,7 +182,23 @@ function createStudentAccounts(request) {
       studentId: student.id
     });
 
-    sendStudentCreatedNotification_(student, contacts, institutionalEmail, groupIds, dinantiaGroups, studentConfig);
+    const studentRegistry = createStudentRegistryRow_(studentRegistryPlan, googleUser);
+    logPanelStep_('createStudentAccounts:studentRegistryCreated', {
+      rowNumber: rowNumber,
+      studentId: student.id,
+      sheetName: studentRegistry.sheetName,
+      registryRowNumber: studentRegistry.rowNumber
+    });
+
+    sendStudentCreatedNotification_(
+      student,
+      contacts,
+      institutionalEmail,
+      groupIds,
+      dinantiaGroups,
+      studentConfig,
+      studentRegistry
+    );
     logPanelStep_('createStudentAccounts:notificationSent', {
       rowNumber: rowNumber,
       studentId: student.id
@@ -185,7 +215,8 @@ function createStudentAccounts(request) {
       message: 'Alumne creat correctament.',
       googleUserId: googleUser.id || '',
       email: institutionalEmail,
-      studentId: student.id
+      studentId: student.id,
+      studentRegistry: studentRegistry
     };
   } catch (error) {
     logPanelError_('createStudentAccounts:failed', error, {
@@ -287,19 +318,31 @@ function createDinantiaStudentAccountOnly(request) {
     }
 
     validateSelectedDinantiaGroups_(groupIds, dinantiaGroups);
+    const directoryUser = getGoogleUserForStudentRegistry_(institutionalEmail);
+    const studentRegistryPlan = prepareStudentRegistryCreation_(
+      student,
+      contacts,
+      institutionalEmail,
+      groupIds,
+      dinantiaGroups
+    );
     updateContactRows_(context.contactsSheet, contacts);
     createDinantiaStudent_(student, contacts, groupIds, institutionalEmail);
+    const studentRegistry = createStudentRegistryRow_(studentRegistryPlan, directoryUser);
 
     logPanelStep_('createDinantiaStudentAccountOnly:success', {
       rowNumber: rowNumber,
       studentId: student.id,
-      groupIds: groupIds
+      groupIds: groupIds,
+      sheetName: studentRegistry.sheetName,
+      registryRowNumber: studentRegistry.rowNumber
     });
 
     return {
       ok: true,
-      message: 'Usuari Dinantia creat correctament.',
-      studentId: student.id
+      message: 'Usuari Dinantia i registre de Dades alumnes creats correctament.',
+      studentId: student.id,
+      studentRegistry: studentRegistry
     };
   } catch (error) {
     logPanelError_('createDinantiaStudentAccountOnly:failed', error, {
@@ -543,7 +586,7 @@ function getNewStudentConfigByCourse_(course) {
   return match;
 }
 
-function sendStudentCreatedNotification_(student, contacts, institutionalEmail, groupIds, dinantiaGroups, studentConfig) {
+function sendStudentCreatedNotification_(student, contacts, institutionalEmail, groupIds, dinantiaGroups, studentConfig, studentRegistry) {
   const recipients = uniqueEmails_([
     CONFIG_.directiveTeamEmail,
     studentConfig.emailCoord,
@@ -553,11 +596,18 @@ function sendStudentCreatedNotification_(student, contacts, institutionalEmail, 
   MailApp.sendEmail({
     to: recipients.join(','),
     subject: 'Alumne creat: ' + buildFullName_(student),
-    body: buildStudentCreatedNotificationBody_(student, contacts, institutionalEmail, groupIds, dinantiaGroups)
+    body: buildStudentCreatedNotificationBody_(
+      student,
+      contacts,
+      institutionalEmail,
+      groupIds,
+      dinantiaGroups,
+      studentRegistry
+    )
   });
 }
 
-function buildStudentCreatedNotificationBody_(student, contacts, institutionalEmail, groupIds, dinantiaGroups) {
+function buildStudentCreatedNotificationBody_(student, contacts, institutionalEmail, groupIds, dinantiaGroups, studentRegistry) {
   const groupSummaries = groupIds.map(function(groupId) {
     const group = dinantiaGroups.find(function(item) {
       return item.id === groupId;
@@ -585,6 +635,11 @@ function buildStudentCreatedNotificationBody_(student, contacts, institutionalEm
     '',
     'Grups Dinantia:',
     groupSummaries.length ? groupSummaries.join('\n') : '- Cap grup informat.',
+    '',
+    'Registre Dades alumnes:',
+    'Full: ' + studentRegistry.sheetName,
+    'Fila: ' + studentRegistry.rowNumber,
+    'Classe: ' + studentRegistry.className,
     '',
     'Familiars:'
   ];

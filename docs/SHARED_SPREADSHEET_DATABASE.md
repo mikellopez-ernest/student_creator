@@ -123,7 +123,8 @@ const values = sheet.getDataRange().getValues();
 | `Dades de professors` | `Llista`, `leave_absence` |
 | `Càrrega lectiva` | `assignatures`, `carrecs`, `professors` |
 | `Horaris` | `GPU001` |
-| `Dinantia` | `dinantia_2_dades_alumnes`, `teachers_2_dinantia`, `contacts_cache`, `new_student_form`, `new_student_form_contacts`, `new_student_config` |
+| `Dinantia` | `dinantia_2_dades_alumnes`, `teachers_2_dinantia`, `contacts_cache`, `students_cache`, `new_student_form`, `new_student_form_contacts`, `new_student_config` |
+| `Dades alumnes` | `1r ESO`, `2n ESO`, `3r ESO`, `4t ESO`, `1r Batx`, `2n Batx`, `SMX`, `PCC`, `PFI`, `AC` |
 | `Grades` | `subjects_cache`, `avaluacions`, generated or task-specific sheets |
 
 Note: when writing Apps Script code or user-facing table references, preserve the exact registered logical table name, including accents, if the registry uses them.
@@ -141,6 +142,7 @@ Note: when writing Apps Script code or user-facing table references, preserve th
 9. Boolean readers should accept both real boolean `true` and string `"TRUE"`.
 10. Do not log, display, or commit secrets.
 11. Access-control role lookups also resolve through this registry, using logical table `Càrrega lectiva`.
+12. New-student creation and withdrawal resolve the permanent student workbook through logical table `Dades alumnes`; do not substitute its Drive filename or hardcode the current school-year spreadsheet ID.
 
 The universal chain is:
 

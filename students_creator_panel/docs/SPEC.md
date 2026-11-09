@@ -4,7 +4,7 @@
 
 `students_creator_panel` is the protected admin Google Apps Script web app used to process pending new-student requests submitted through `secretaria_form`.
 
-The panel reads the shared database tables, lets an authorized admin review and correct contact data, creates the Google Workspace student user, creates the Dinantia student account, sends a completion notification, and marks the source row as managed.
+The panel reads the shared database tables, lets an authorized admin review and correct contact data, creates the Google Workspace student user, creates the Dinantia student account, creates the permanent row in `Dades alumnes 2026-2027`, sends a completion notification, and marks the source row as managed.
 
 ## Deployment
 
@@ -46,7 +46,7 @@ All spreadsheet access must resolve through:
 script property db
 -> registry spreadsheet
 -> tables sheet
--> logical table Dinantia
+-> logical table (`Dinantia`, `Dades alumnes`, or `Càrrega lectiva`)
 -> registered spreadsheet ID
 -> requested sheet tab
 ```
@@ -94,6 +94,12 @@ Course routing configuration.
 | `courses` | Yes | Course/level value. Must match `new_student_form.level`. |
 | `email_coord` | Yes | Coordinator notification recipient for the selected course. |
 | `email_digi` | Yes | Digital coordinator notification recipient for the selected course. |
+
+### `Dades alumnes -> course sheets`
+
+Permanent student rows are written to `1r ESO`, `2n ESO`, `3r ESO`, `4t ESO`, `1r Batx`, `2n Batx`, `SMX`, `PCC`, `PFI`, or `AC`.
+
+The exact level mapping, column mapping, formatting behavior, duplicate protection, and failure model are specified in `docs/STUDENT_REGISTRY_CREATION.md`.
 
 ## Access Control
 
@@ -315,11 +321,14 @@ Server sequence:
 12. Check Dinantia account ID availability.
 13. Validate selected Dinantia group IDs against the fetched group list.
 14. Validate contact names, emails, phones, and relations.
-15. Write corrected contact values back to `new_student_form_contacts`.
-16. Create the Google Workspace user.
-17. Create the Dinantia student account.
-18. Send completion notification email.
-19. Set `new_student_form.managed` to `TRUE`.
+15. Resolve and validate the `Dades alumnes` destination sheet and selected class group.
+16. Reject the student ID if it already exists in any supported registry sheet.
+17. Write corrected contact values back to `new_student_form_contacts`.
+18. Create the Google Workspace user.
+19. Create the Dinantia student account.
+20. Create and verify the `Dades alumnes` row.
+21. Send completion notification email.
+22. Set `new_student_form.managed` to `TRUE`.
 
 If any step fails, the function throws an error and the row remains visible for correction/retry. `managed` is only set after all previous steps succeed.
 
@@ -380,9 +389,13 @@ Server sequence:
 9. Validate required student fields and contact data.
 10. Check Dinantia account ID availability.
 11. Validate selected Dinantia group IDs against the fetched group list.
-12. Write corrected contact values back to `new_student_form_contacts`.
-13. Create the Dinantia student account.
-14. Return success without setting `managed` to `TRUE`.
+12. Require the referenced institutional Google account to exist.
+13. Resolve and validate the `Dades alumnes` destination and class group.
+14. Reject duplicate student IDs across all supported registry sheets.
+15. Write corrected contact values back to `new_student_form_contacts`.
+16. Create the Dinantia student account.
+17. Create and verify the `Dades alumnes` row.
+18. Return success without setting `managed` to `TRUE`.
 
 ### `Arxivar`
 
@@ -464,7 +477,7 @@ The contact `relation` value is not sent to Dinantia because it is not a documen
 
 ## Notification Email
 
-After both external accounts are created, the panel sends a summary email to:
+After both external accounts and the registry row are created, the panel sends a summary email to:
 
 - `equip_directiu@iernestlluch.cat`
 - `email_coord` for the selected level in `new_student_config`
@@ -481,6 +494,7 @@ The email includes:
 - Comment, or `-`
 - Generated institutional email
 - Selected Dinantia group IDs and labels
+- `Dades alumnes` destination sheet, row number, and class
 - Every contact full name, email, phone, and relation
 
 ## Logging
@@ -497,12 +511,14 @@ Important stages:
 - `createStudentAccounts:dinantiaGroupsLoaded`
 - `createStudentAccounts:courseConfigLoaded`
 - `createStudentAccounts:validated`
+- `createStudentAccounts:studentRegistryPrepared`
 - `createStudentAccounts:contactsUpdated`
 - `createStudentAccounts:googleUserCreated`
 - `createDinantiaStudent:payloadReady`
 - `dinantiaFetch:start`
 - `dinantiaFetch:response`
 - `createStudentAccounts:dinantiaUserCreated`
+- `createStudentAccounts:studentRegistryCreated`
 - `createStudentAccounts:notificationSent`
 - `createStudentAccounts:managedSet`
 - `createStudentAccounts:failed`
@@ -552,6 +568,7 @@ OAuth scopes:
 | `src/AccessControl.js` | Shared role/email access decision, no-access page, and permission helper. |
 | `src/Workspace.js` | Google Workspace user operations and compatibility wrapper for server-side access checks. |
 | `src/DinantiaClient.js` | Dinantia API client, group loading, account checks, student creation. |
+| `src/StudentRegistry.js` | `Dades alumnes` placement, schema checks, duplicate protection, row creation, and post-write verification. |
 | `src/Database.js` | Shared spreadsheet registry and header helpers. |
 | `src/Config.js` | Local constants: sheet names, OU paths, domains, defaults. |
 | `src/Debug.js` | Safe structured logging helpers. |
@@ -564,6 +581,7 @@ The current implementation is intentionally conservative:
 - If validation fails, no external accounts are created.
 - If Google creation fails, Dinantia is not called.
 - If Dinantia creation fails, `managed` is not set to `TRUE`.
+- If the `Dades alumnes` row cannot be created or verified, `managed` is not set to `TRUE`.
 - If notification email fails, `managed` is not set to `TRUE`.
 - If `managed` is not `TRUE`, the row remains visible for retry.
 - Partial creation actions do not set `managed` to `TRUE`.
@@ -572,6 +590,7 @@ The current implementation is intentionally conservative:
 Known operational caveat:
 
 - If Google Workspace user creation succeeds but Dinantia creation fails, the Google user already exists. On retry, the current flow will stop at the Google email availability check unless the admin changes the email or the code is later extended to treat an already-created matching Google user as resumable.
+- If Google and Dinantia succeed but the `Dades alumnes` write fails, the external accounts remain created. The flow does not automatically delete those accounts.
 
 ## Open Decisions
 

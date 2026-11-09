@@ -64,13 +64,21 @@ Both apps protect `doGet()` and browser-callable server methods.
 
 - `doGet()`
 - `submitNewStudentForm(payload)`
+- `getWithdrawalGroups()`
+- `getWithdrawalStudents(groupName)`
+- `withdrawStudent(payload)`
 
 `students_creator_panel`:
 
 - `doGet()`
 - `getPanelData()`
 - `checkGoogleEmailAvailability(email)`
+- `checkGoogleEmailPrefixMatches(prefix)`
+- `checkDinantiaIdAvailability(id)`
 - `createStudentAccounts(request)`
+- `createGoogleStudentAccountOnly(request)`
+- `createDinantiaStudentAccountOnly(request)`
+- `archiveStudentRequest(request)`
 
 If access is denied during `doGet()`, the app renders an `Acces no autoritzat` page. If access is denied during a server method, the method throws an error to the browser.
 
