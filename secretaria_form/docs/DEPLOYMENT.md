@@ -57,9 +57,21 @@ Before deploying or testing, confirm these script properties exist:
 
 If `access_granted` is missing or empty, the deployed app shows `Acces no autoritzat`.
 
-The manifest requires `script.external_request` in addition to the existing spreadsheet, email, container UI, and active-user scopes. After adding this scope, the deploying user must authorize the new version before domain users can process withdrawals.
+The manifest requires `script.external_request` in addition to the existing spreadsheet, email, container UI, and active-user scopes. After adding this scope, the deploying user must authorize the new version before domain users can process withdrawals. Deploying a new version does not grant the scope automatically.
 
-Run `grantRequiredPermissions()` manually if Apps Script asks the deploying user to authorize access to `Càrrega lectiva`. Authorize the external-request scope from the Apps Script editor or deployment flow as the deploying account.
+Open the project in the Apps Script editor while signed in as the account that owns the deployment, select `grantRequiredPermissions`, and click `Run`. Complete the Google authorization dialog and grant every requested scope. The helper verifies script properties, active-user identity, `Càrrega lectiva`, and a harmless `GET /v1/accounts/index?limit=1` Dinantia request. A web-app execution cannot show this consent dialog for the deploying account.
+
+For the current deployment, the authorizing account is:
+
+```text
+admindomini@iernestlluch.cat
+```
+
+Project editor:
+
+```text
+https://script.google.com/home/projects/1KpY9TUEFi3evt-1NmVQLAVcAw-rbiDlyEYnRQTc_HrSq3wEXuN5RI2wg/edit
+```
 
 ## Post-Deployment Checks
 

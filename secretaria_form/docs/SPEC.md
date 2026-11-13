@@ -207,7 +207,7 @@ Denied access behavior:
 - `submitNewStudentForm(payload)` throws a server error returned to the browser.
 - Withdrawal loaders and actions throw server errors returned to the withdrawal page.
 
-`grantRequiredPermissions()` touches the script properties, active user email, and the `Càrrega lectiva` lookup sheets so the deploying user can authorize the required scopes.
+`grantRequiredPermissions()` touches the script properties, active user email, and the `Càrrega lectiva` lookup sheets, then performs a harmless one-record Dinantia lookup. Running it from the Apps Script editor as the deploying account forces Google to request the complete scope set, including `script.external_request`. Web-app executions cannot present that consent dialog for the deploying account.
 
 ## Validation
 
@@ -360,6 +360,7 @@ User-facing errors are intentionally clear and specific:
 - Already-withdrawn permanent rows
 - Missing or invalid course notification recipients
 - Missing Dinantia accounts or API deletion failures
+- Missing deploying-account authorization for `script.external_request`, with instructions to run `grantRequiredPermissions()`
 - Permanent-row post-write verification failures
 - Cache-row deletion or post-delete verification failures
 - Notification failure after the destructive steps have completed

@@ -199,10 +199,11 @@ function grantRequiredPermissions() {
   Session.getActiveUser().getEmail();
   getWorkloadCarrecsSheet_().getRange(1, 1).getValue();
   getWorkloadProfessorsSheet_().getRange(1, 1).getValue();
+  dinantiaFetch_('/v1/accounts/index?limit=1');
 
   return {
     ok: true,
-    message: 'Permisos concedits correctament.'
+    message: 'Permisos concedits correctament, inclos l acces extern a Dinantia.'
   };
 }
 

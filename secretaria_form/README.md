@@ -123,6 +123,8 @@ All browser-callable methods enforce the same check, including the landing page,
 
 If access is denied while opening the app, the user sees an `Acces no autoritzat` page. If access is denied during submission, the server method returns an error to the form.
 
+After adding or changing OAuth scopes, the deploying account must open the Apps Script editor and run `grantRequiredPermissions()` once. The helper performs a harmless Dinantia lookup so the authorization dialog includes `script.external_request`; web-app executions cannot display this consent dialog on behalf of the deploying account.
+
 ## Shared References
 
 - `../docs/SHARED_SPREADSHEET_DATABASE.md`

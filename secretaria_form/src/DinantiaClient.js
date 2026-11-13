@@ -19,13 +19,27 @@ function dinantiaFetch_(path, options) {
   const config = getDinantiaConfig_();
   const requestOptions = options || {};
   const method = requestOptions.method || 'get';
-  const response = UrlFetchApp.fetch(config.baseUrl + path, {
-    method: method,
-    headers: buildDinantiaHeaders_(),
-    payload: requestOptions.payload ? JSON.stringify(requestOptions.payload) : undefined,
-    contentType: 'application/vnd.api+json',
-    muteHttpExceptions: true
-  });
+  let response;
+  try {
+    response = UrlFetchApp.fetch(config.baseUrl + path, {
+      method: method,
+      headers: buildDinantiaHeaders_(),
+      payload: requestOptions.payload ? JSON.stringify(requestOptions.payload) : undefined,
+      contentType: 'application/vnd.api+json',
+      muteHttpExceptions: true
+    });
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error);
+    if (message.indexOf('script.external_request') !== -1 ||
+        message.indexOf('UrlFetchApp.fetch') !== -1) {
+      throw new Error(
+        'El compte que ha desplegat l aplicacio no ha autoritzat l acces extern a Dinantia. ' +
+        'Cal obrir el projecte Apps Script amb aquest compte, executar grantRequiredPermissions ' +
+        'i acceptar tots els permisos sol licitats.'
+      );
+    }
+    throw error;
+  }
   const status = response.getResponseCode();
   const text = response.getContentText();
   const body = parseDinantiaResponse_(text, status);
